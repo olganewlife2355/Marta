@@ -223,6 +223,38 @@ function openResponsesSheet() {
   }
 }
 
+// Виводить усі ключові посилання проєкту в Logs
+function openForm() {
+  var p = PropertiesService.getScriptProperties();
+  var formId = p.getProperty('FORM_ID');
+
+  if (!formId) {
+    Logger.log('⚠️ FORM_ID не знайдено. Спочатку запустіть step1_CreateBase()');
+    return;
+  }
+
+  var form = FormApp.openById(formId);
+  Logger.log('═══ ПОСИЛАННЯ ПРОЄКТУ ═══');
+  Logger.log('');
+  Logger.log('📝 РЕДАГУВАТИ форму:');
+  Logger.log(form.getEditUrl());
+  Logger.log('');
+  Logger.log('👀 ВІДКРИТИ форму як респондент:');
+  Logger.log(form.getPublishedUrl());
+  Logger.log('');
+  Logger.log('📊 ВКЛАДКА «Відповіді» у формі:');
+  Logger.log('https://docs.google.com/forms/d/' + formId + '/edit#responses');
+  Logger.log('');
+
+  var sheetUrl = p.getProperty('RESPONSES_SHEET_URL');
+  if (sheetUrl) {
+    Logger.log('📋 Google Sheets з відповідями:');
+    Logger.log(sheetUrl);
+  } else {
+    Logger.log('📋 Sheets ще не прив\'язано — запустіть step4_LinkSpreadsheet()');
+  }
+}
+
 
 // ════════════════════════════════════════════════════════════════
 //  ДОПОМІЖНА: Entry IDs для pre-fill URL
