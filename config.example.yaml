@@ -1,0 +1,61 @@
+database:
+  path: data/jobs.db
+
+keywords:
+  - вакансія
+  - hiring
+  - job opening
+  - шукаємо
+  - remote
+  - розробник
+
+companies:
+  - name: "Company Name"
+    telegram: "@channel"
+    linkedin: "company-slug"
+    instagram: "handle"
+    dou: "company-url"
+
+sources:
+  dou:
+    enabled: true
+    categories: [Python, JavaScript, DevOps]
+    rss_base: "https://jobs.dou.ua/vacancies/feeds/"
+  telegram:
+    enabled: true
+    api_id: "YOUR_API_ID"
+    api_hash: "YOUR_API_HASH"
+    channels:
+      - "@dou_ua"
+      - "@djinni_jobs"
+  linkedin:
+    enabled: true
+    search_terms: ["Python developer Ukraine", "Frontend developer remote"]
+  instagram:
+    enabled: false
+    profiles: []
+  threads:
+    enabled: false
+    profiles: []
+
+notifications:
+  telegram:
+    enabled: true
+    bot_token: "YOUR_BOT_TOKEN"
+    chat_id: "YOUR_CHAT_ID"
+    batch_size: 10
+  email:
+    enabled: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    username: "your@gmail.com"
+    password: "YOUR_APP_PASSWORD"
+    recipients:
+      - "you@example.com"
+
+reports:
+  output_dir: data/reports
+  daily: true
+  weekly: true
+  daily_time: "09:00"
+  weekly_day: "monday"

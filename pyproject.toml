@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "social-media-job-monitor"
+version = "1.0.0"
+description = "Monitor company social activity for job postings across DOU.ua, Telegram, LinkedIn, Instagram, and Threads"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+keywords = ["job", "monitoring", "scraping", "telegram", "linkedin", "dou"]
+dependencies = [
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "feedparser>=6.0.10",
+    "lxml>=4.9.0",
+    "telethon>=1.34.0",
+    "instaloader>=4.10.0",
+    "python-telegram-bot>=20.0",
+    "apscheduler>=3.10.0",
+    "pyyaml>=6.0",
+    "jinja2>=3.1.0",
+]
+
+[project.scripts]
+job-monitor = "main:main"
+
+[tool.setuptools.packages.find]
+include = ["monitor*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.yml"]
