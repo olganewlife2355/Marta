@@ -223,6 +223,323 @@ function openResponsesSheet() {
   }
 }
 
+// ════════════════════════════════════════════════════════════════
+//  ЕКСПОРТ І ПІДРАХУНОК ШКАЛ
+// ════════════════════════════════════════════════════════════════
+//
+//  3 функції — запускати у такому порядку:
+//    1. exportAllResponses() → лист «Clean_Responses» (сирі бали)
+//    2. computeScales()      → лист «Scales» (SPANE-P/N/B, конфлікт, РОД)
+//    3. computePairs()       → лист «Pairs» (з'єднує жінку+чоловіка по P-XXX)
+//
+//  Шкали:
+//    • SPANE (Diener 2010): P = айтеми 1,3,5,7,10,12; N = 2,4,6,8,9,11;
+//      Balance = P − N. Діапазон: P,N: 6–30; B: −24…+24.
+//    • РОД (Волкова 1985): 7 підшкал, кожна = сума 3 айтемів (0–9).
+//      Шкали 1–2 — тільки очікування. Шкали 3–7 — О і Д окремо.
+//    • АГД-32 (Альошина 1987): загальне середнє (−2..+2). Розкладку
+//      по 8 сферах варто звірити з першоджерелом — додам після
+//      підтвердження мапінгу.
+// ════════════════════════════════════════════════════════════════
+
+var SPANE_POSITIVE = [1, 3, 5, 7, 10, 12];
+var SPANE_NEGATIVE = [2, 4, 6, 8, 9, 11];
+
+var ROD_SUBSCALES = {
+  'Інтимно-сексуальна':         { O: [1, 2, 3],     D: [] },
+  'Особистісна_ідентифікація':  { O: [4, 5, 6],     D: [] },
+  'Господарсько-побутова':      { O: [7, 8, 9],     D: [22, 23, 24] },
+  'Батьківсько-виховна':        { O: [10, 11, 12],  D: [25, 26, 27] },
+  'Соціальна_активність':       { O: [13, 14, 15],  D: [28, 29, 30] },
+  'Емоційно-психотерапевтична': { O: [16, 17, 18],  D: [31, 32, 33] },
+  'Зовнішня_привабливість':     { O: [19, 20, 21],  D: [34, 35, 36] }
+};
+
+function parseScoreFromAnswer_(text) {
+  if (text == null || text === '') return null;
+  text = String(text).trim().replace(/−/g, '-');
+  var m = text.match(/^([+\-]?\s*\d+)\s*[—–\-]/);
+  if (m) return parseInt(m[1].replace(/\s/g, '').replace('+', ''), 10);
+  if (/^[+\-]?\d+$/.test(text)) return parseInt(text.replace('+', ''), 10);
+  return null;
+}
+
+function getOrCreateResponsesSheet_() {
+  var props = PropertiesService.getScriptProperties();
+  var sheetId = props.getProperty('RESPONSES_SHEET_ID');
+  if (sheetId) {
+    try { return SpreadsheetApp.openById(sheetId); } catch (e) {}
+  }
+  var ss = SpreadsheetApp.create('Відповіді — Подружні стосунки');
+  props.setProperty('RESPONSES_SHEET_ID', ss.getId());
+  props.setProperty('RESPONSES_SHEET_URL', ss.getUrl());
+  return ss;
+}
+
+// КРОК 5: Експорт усіх відповідей у структуровану таблицю
+function exportAllResponses() {
+  Logger.log('⏳ Експортуємо всі відповіді...');
+
+  var props = PropertiesService.getScriptProperties();
+  var formId = props.getProperty('FORM_ID');
+  if (!formId) {
+    Logger.log('❌ FORM_ID не знайдено. Спочатку step1_CreateBase()');
+    return;
+  }
+
+  var form = FormApp.openById(formId);
+  var responses = form.getResponses();
+  if (!responses.length) {
+    Logger.log('ℹ️ У формі поки немає відповідей.');
+    return;
+  }
+
+  var ss = getOrCreateResponsesSheet_();
+  var name = 'Clean_Responses';
+  var existing = ss.getSheetByName(name);
+  if (existing) ss.deleteSheet(existing);
+  var sheet = ss.insertSheet(name);
+
+  var headers = ['Timestamp', 'Pair_Code', 'Gender', 'Age', 'Status', 'Duration', 'Children'];
+  for (var i = 1; i <= 12; i++) headers.push('SPANE_' + i);
+  for (var i = 1; i <= 32; i++) headers.push('Conflict_' + i);
+  for (var i = 1; i <= 36; i++) headers.push('ROD_' + i);
+  sheet.appendRow(headers);
+
+  var idx = {};
+  headers.forEach(function(h, i) { idx[h] = i; });
+
+  var rows = [];
+  responses.forEach(function(resp) {
+    var row = new Array(headers.length).fill('');
+    row[0] = resp.getTimestamp();
+
+    resp.getItemResponses().forEach(function(ir) {
+      var title = ir.getItem().getTitle();
+      var ans = ir.getResponse();
+      if (Array.isArray(ans)) ans = ans.join('; ');
+
+      if (title.indexOf('Код пари') !== -1) row[idx['Pair_Code']] = ans;
+      else if (title === 'Ваша стать')     row[idx['Gender']] = ans;
+      else if (title.indexOf('Ваш вік') !== -1) row[idx['Age']] = ans;
+      else if (title.indexOf('сімейний стан') !== -1) row[idx['Status']] = ans;
+      else if (title.indexOf('Тривалість') !== -1)   row[idx['Duration']] = ans;
+      else if (title.indexOf('діти') !== -1)         row[idx['Children']] = ans;
+      else if (title.indexOf('Я відчував(ла)') !== -1) {
+        var m = title.match(/^(\d+)\./);
+        if (m) {
+          var n = parseInt(m[1], 10);
+          if (n >= 1 && n <= 12) row[idx['SPANE_' + n]] = parseScoreFromAnswer_(ans);
+        }
+      }
+      else if (title.indexOf('Ситуація') === 0) {
+        var m = title.match(/^Ситуація\s+(\d+)/);
+        if (m) {
+          var n = parseInt(m[1], 10);
+          if (n >= 1 && n <= 32) row[idx['Conflict_' + n]] = parseScoreFromAnswer_(ans);
+        }
+      }
+      else if (/^\d+\.\s/.test(title)) {
+        var m = title.match(/^(\d+)\./);
+        if (m) {
+          var n = parseInt(m[1], 10);
+          if (n >= 1 && n <= 36) row[idx['ROD_' + n]] = parseScoreFromAnswer_(ans);
+        }
+      }
+    });
+
+    rows.push(row);
+  });
+
+  if (rows.length > 0) {
+    sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+  }
+  sheet.setFrozenRows(1);
+  sheet.setFrozenColumns(3);
+
+  Logger.log('✅ Експортовано ' + responses.length + ' відповідей у лист «' + name + '».');
+  Logger.log('🔗 ' + ss.getUrl());
+  return ss.getUrl();
+}
+
+// КРОК 6: Підрахунок шкал SPANE, конфлікту, РОД
+function computeScales() {
+  Logger.log('⏳ Підраховуємо шкали...');
+
+  var props = PropertiesService.getScriptProperties();
+  var sheetId = props.getProperty('RESPONSES_SHEET_ID');
+  if (!sheetId) {
+    Logger.log('❌ Спочатку запустіть exportAllResponses()');
+    return;
+  }
+  var ss = SpreadsheetApp.openById(sheetId);
+  var src = ss.getSheetByName('Clean_Responses');
+  if (!src) {
+    Logger.log('❌ Лист «Clean_Responses» не знайдено. Запустіть exportAllResponses()');
+    return;
+  }
+
+  var data = src.getDataRange().getValues();
+  if (data.length < 2) {
+    Logger.log('ℹ️ Немає даних для обробки.');
+    return;
+  }
+
+  var headers = data[0];
+  var col = {};
+  headers.forEach(function(h, i) { col[h] = i; });
+
+  var existing = ss.getSheetByName('Scales');
+  if (existing) ss.deleteSheet(existing);
+  var sheet = ss.insertSheet('Scales');
+
+  var outHeaders = [
+    'Timestamp', 'Pair_Code', 'Gender', 'Age',
+    'SPANE_P', 'SPANE_N', 'SPANE_B', 'Conflict_Mean'
+  ];
+  Object.keys(ROD_SUBSCALES).forEach(function(n) {
+    outHeaders.push('ROD_O_' + n);
+    if (ROD_SUBSCALES[n].D.length > 0) outHeaders.push('ROD_D_' + n);
+  });
+  sheet.appendRow(outHeaders);
+
+  function sumItems_(row, prefix, indices) {
+    var s = 0, ok = true;
+    indices.forEach(function(i) {
+      var v = row[col[prefix + i]];
+      if (typeof v === 'number') s += v; else ok = false;
+    });
+    return ok ? s : null;
+  }
+
+  var outRows = [];
+  data.slice(1).forEach(function(row) {
+    var out = [
+      row[col['Timestamp']],
+      row[col['Pair_Code']],
+      row[col['Gender']],
+      row[col['Age']]
+    ];
+
+    var p = sumItems_(row, 'SPANE_', SPANE_POSITIVE);
+    var n = sumItems_(row, 'SPANE_', SPANE_NEGATIVE);
+    out.push(p == null ? '' : p);
+    out.push(n == null ? '' : n);
+    out.push((p == null || n == null) ? '' : p - n);
+
+    var cSum = 0, cCount = 0;
+    for (var i = 1; i <= 32; i++) {
+      var v = row[col['Conflict_' + i]];
+      if (typeof v === 'number') { cSum += v; cCount++; }
+    }
+    out.push(cCount > 0 ? Number((cSum / cCount).toFixed(2)) : '');
+
+    Object.keys(ROD_SUBSCALES).forEach(function(name) {
+      var sub = ROD_SUBSCALES[name];
+      var o = sumItems_(row, 'ROD_', sub.O);
+      out.push(o == null ? '' : o);
+      if (sub.D.length > 0) {
+        var d = sumItems_(row, 'ROD_', sub.D);
+        out.push(d == null ? '' : d);
+      }
+    });
+
+    outRows.push(out);
+  });
+
+  if (outRows.length > 0) {
+    sheet.getRange(2, 1, outRows.length, outHeaders.length).setValues(outRows);
+  }
+  sheet.setFrozenRows(1);
+  sheet.setFrozenColumns(3);
+
+  Logger.log('✅ Шкали підраховано для ' + outRows.length + ' респондентів → лист «Scales».');
+  Logger.log('🔗 ' + ss.getUrl());
+}
+
+// КРОК 7: Парування партнерів (тільки P-XXX, де є обидва)
+function computePairs() {
+  Logger.log('⏳ Паруємо партнерів...');
+
+  var props = PropertiesService.getScriptProperties();
+  var sheetId = props.getProperty('RESPONSES_SHEET_ID');
+  if (!sheetId) {
+    Logger.log('❌ Спочатку запустіть exportAllResponses() і computeScales()');
+    return;
+  }
+  var ss = SpreadsheetApp.openById(sheetId);
+  var src = ss.getSheetByName('Scales');
+  if (!src) {
+    Logger.log('❌ Лист «Scales» не знайдено. Запустіть computeScales()');
+    return;
+  }
+
+  var data = src.getDataRange().getValues();
+  if (data.length < 2) {
+    Logger.log('ℹ️ Немає шкал для парування.');
+    return;
+  }
+
+  var headers = data[0];
+  var idxCode = headers.indexOf('Pair_Code');
+  var idxGender = headers.indexOf('Gender');
+
+  var groups = {};
+  data.slice(1).forEach(function(row) {
+    var code = row[idxCode];
+    if (!code) return;
+    if (!groups[code]) groups[code] = [];
+    groups[code].push(row);
+  });
+
+  var pairs = [];
+  Object.keys(groups).forEach(function(code) {
+    if (String(code).indexOf('P-') !== 0) return;
+    var arr = groups[code];
+    var f = null, m = null;
+    arr.forEach(function(r) {
+      if (r[idxGender] === 'Жіноча' && !f) f = r;
+      if (r[idxGender] === 'Чоловіча' && !m) m = r;
+    });
+    if (f && m) pairs.push({ code: code, female: f, male: m });
+  });
+
+  var existing = ss.getSheetByName('Pairs');
+  if (existing) ss.deleteSheet(existing);
+  var sheet = ss.insertSheet('Pairs');
+
+  var firstScaleIdx = 4; // SPANE_P і далі
+  var scaleHeaders = ['Pair_Code'];
+  for (var i = firstScaleIdx; i < headers.length; i++) {
+    scaleHeaders.push(headers[i] + '_F');
+    scaleHeaders.push(headers[i] + '_M');
+    scaleHeaders.push(headers[i] + '_Diff');
+  }
+  sheet.appendRow(scaleHeaders);
+
+  var outRows = [];
+  pairs.forEach(function(p) {
+    var row = [p.code];
+    for (var i = firstScaleIdx; i < headers.length; i++) {
+      var fv = p.female[i], mv = p.male[i];
+      row.push(fv);
+      row.push(mv);
+      row.push((typeof fv === 'number' && typeof mv === 'number') ? fv - mv : '');
+    }
+    outRows.push(row);
+  });
+
+  if (outRows.length > 0) {
+    sheet.getRange(2, 1, outRows.length, scaleHeaders.length).setValues(outRows);
+  }
+  sheet.setFrozenRows(1);
+  sheet.setFrozenColumns(1);
+
+  Logger.log('✅ Повних пар (обидва партнери заповнили): ' + pairs.length);
+  Logger.log('🔗 ' + ss.getUrl());
+}
+
+
 // Виводить усі ключові посилання проєкту в Logs
 function openForm() {
   var p = PropertiesService.getScriptProperties();
