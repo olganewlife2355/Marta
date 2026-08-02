@@ -42,7 +42,7 @@ const CONFIG = {
   },
 
   PRICES: {
-    ogranka: '1500 грн',
+    ogranka: '750 грн',
     pidpyska: '1500 грн/місяць',
     diana: '15 000 грн за 3 місяці (можлива оплата частинами)',
   },
@@ -255,8 +255,8 @@ function setupSurveyForm() {
   form.addMultipleChoiceItem()
     .setTitle(Q.budget)
     .setChoiceValues([
-      'До 1500 грн',
-      '1500–5000 грн',
+      'До 750 грн',
+      '750–5000 грн',
       '5000–15 000 грн',
       'Понад 15 000 грн',
       'Поки не готова інвестувати',
