@@ -4,38 +4,36 @@
  * Google Apps Script: форма + автоматичні листи + аналітика
  * ============================================================
  *
- * ЩО РОБИТЬ СКРИПТ:
- * 1) setupSurveyForm() — створює Google Форму (22 запитання),
- *    таблицю для відповідей і тригер автоматичної обробки.
- * 2) onFormSubmit(e) — після кожної відповіді:
- *    - записує структуровані дані в аркуш «Аналітика»;
- *    - надсилає персоналізований лист залежно від обраної програми.
+ * ЄДИНА ДІЯ, ЯКА ПОТРІБНА ВІД ВАС:
+ *   1. Вставте цей код у Code.gs (повністю замінивши старий).
+ *   2. Угорі виберіть функцію START і натисніть Run.
+ *   3. Дайте дозволи (Forms, Sheets, Gmail, Drive).
+ *   4. У журналі буде посилання на форму. Все.
  *
- * ЯК ЗАПУСТИТИ:
- * 1. Відкрийте script.google.com → «Новий проєкт».
- * 2. Вставте цей код у Code.gs.
- * 3. У CONFIG нижче замініть плейсхолдери [У КВАДРАТНИХ ДУЖКАХ]
- *    на реальні посилання, дати й підпис.
- * 4. Запустіть setupSurveyForm() (Run) і надайте дозволи
- *    (Forms, Sheets, Gmail).
- * 5. У журналі (Logs) буде посилання на форму — його й публікуємо.
+ * START сам розбереться, що робити:
+ *   - знайде вашу вже створену форму (нічого вставляти не треба);
+ *   - оновить у ній ціни (Огранка 750 грн) — посилання не зміниться;
+ *   - перевірить таблицю відповідей і тригер листів;
+ *   - якщо форми ще немає — створить нову з нуля.
  *
- * ПРИМІТКА: скрипт розрахований на звичайний акаунт @gmail.com,
- * тому email збираємо окремим обов'язковим полем із перевіркою.
+ * START можна запускати скільки завгодно разів — нічого не зламається
+ * і дублікатів не з'явиться.
+ *
+ * Після кожної заповненої анкети скрипт сам:
+ *   - запише відповідь в аркуш «Аналітика»;
+ *   - надішле учасниці персональний лист (без жодних посилань:
+ *     оплата й домовленості — особистим повідомленням).
  * ============================================================
  */
 
 // =======================================================
-// КОНФІГУРАЦІЯ — заповнити перед запуском
+// КОНФІГУРАЦІЯ
 // =======================================================
 
 const CONFIG = {
   FORM_TITLE: 'Анкета учасниці | ОГРАНКА та ДІАНА',
   SHEET_TITLE: 'ОГРАНКА_ДІАНА_Відповіді',
   ANALYTICS_SHEET: 'Аналітика',
-
-  // Жодних посилань у листах не публікуємо: і оплату, і домовленість
-  // про розмову надсилаємо кожній учасниці особистим повідомленням.
 
   DATES: {
     ogrankaStart: 'понеділок, 3 серпня 2026',
@@ -53,14 +51,34 @@ const CONFIG = {
     'Telegram: t.me/liudmula_boiko',
 };
 
-// Варіанти відповіді на головне запитання (використовуються
-// і у формі, і в обробці — не змінювати лише в одному місці!)
+// Варіанти головного запитання — однакові у формі та в обробці
 const CHOICE = {
   OGRANKA: '💎 ОГРАНКА — онлайн-марафон, ' + CONFIG.PRICES.ogranka,
   PIDPYSKA: '📱 Підписка — закритий Telegram-канал Людмили Бойко, ' + CONFIG.PRICES.pidpyska,
   FULL: '👑 ДІАНА — програма на 3 місяці, ' + CONFIG.PRICES.diana,
   UNSURE: '🤔 Поки вагаюся — хочу спершу поспілкуватися',
 };
+
+const PROGRAM_CHOICES = [CHOICE.OGRANKA, CHOICE.PIDPYSKA, CHOICE.FULL, CHOICE.UNSURE];
+
+const BUDGET_CHOICES = [
+  'До 750 грн',
+  '750–5000 грн',
+  '5000–15 000 грн',
+  'Понад 15 000 грн',
+  'Поки не готова інвестувати',
+];
+
+const PROGRAM_BLOCK_TITLE = 'Блок 4 із 5: Вибір програми';
+
+const PROGRAM_HELP =
+  '💎 ОГРАНКА — груповий онлайн-марафон. Старт, енергія групи, ' +
+  'перші відчутні результати. Вартість: ' + CONFIG.PRICES.ogranka + '.\n\n' +
+  '📱 Підписка — закритий Telegram-канал Людмили Бойко: практики, ' +
+  'ефіри, підтримка щодня. Гнучко і без довгих зобов\'язань. ' +
+  'Вартість: ' + CONFIG.PRICES.pidpyska + '.\n\n' +
+  '👑 ДІАНА — глибока програма на 3 місяці, персональна робота ' +
+  'до результату. Повна вартість: ' + CONFIG.PRICES.diana + '.';
 
 // Точні назви запитань (для надійного розбору відповідей)
 const Q = {
@@ -95,10 +113,179 @@ const Q = {
 
 
 // =======================================================
-// КРОК 1: СТВОРЕННЯ ФОРМИ
+// ★ ГОЛОВНА ФУНКЦІЯ — ЗАПУСКАЙТЕ ЛИШЕ ЇЇ ★
 // =======================================================
 
-function setupSurveyForm() {
+function START() {
+  let form = findExistingForm();
+
+  if (form) {
+    Logger.log('Знайдено наявну форму: «' + form.getTitle() + '». Оновлюю ціни...');
+    updatePricesInForm(form);
+  } else {
+    Logger.log('Наявної форми не знайдено. Створюю нову...');
+    form = createNewForm();
+  }
+
+  // Запам'ятовуємо форму, щоб наступні запуски знаходили її миттєво
+  PropertiesService.getScriptProperties()
+    .setProperty('FORM_ID', form.getId());
+
+  const spreadsheet = ensureSpreadsheet(form);
+  ensureTrigger(form);
+
+  Logger.log('==========================================');
+  Logger.log('ГОТОВО! Все налаштовано і працює.');
+  Logger.log('Посилання для учасниць: ' + form.getPublishedUrl());
+  Logger.log('Редагування форми: ' + form.getEditUrl());
+  Logger.log('Таблиця з відповідями: ' + spreadsheet.getUrl());
+  Logger.log('==========================================');
+
+  return {
+    formUrl: form.getPublishedUrl(),
+    editUrl: form.getEditUrl(),
+    sheetUrl: spreadsheet.getUrl(),
+  };
+}
+
+
+// =======================================================
+// ПОШУК УЖЕ СТВОРЕНОЇ ФОРМИ (автоматично, без ID)
+// =======================================================
+
+function findExistingForm() {
+  // 1) Форма, збережена попереднім запуском START
+  const savedId = PropertiesService.getScriptProperties().getProperty('FORM_ID');
+  if (savedId) {
+    try {
+      return FormApp.openById(savedId);
+    } catch (e) {
+      Logger.log('Збережену форму не відкрито (' + e.message + '), шукаю далі...');
+    }
+  }
+
+  // 2) Форма, до якої прив'язаний тригер onFormSubmit у цьому проєкті
+  const triggers = ScriptApp.getProjectTriggers();
+  for (let i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'onFormSubmit') {
+      try {
+        return FormApp.openById(triggers[i].getTriggerSourceId());
+      } catch (e) {
+        Logger.log('Форму з тригера не відкрито, шукаю далі...');
+      }
+    }
+  }
+
+  // 3) Пошук у Google Drive за назвою
+  const files = DriveApp.getFilesByType(MimeType.GOOGLE_FORMS);
+  let newest = null;
+  while (files.hasNext()) {
+    const file = files.next();
+    if (file.getName() === CONFIG.FORM_TITLE && !file.isTrashed()) {
+      if (!newest || file.getLastUpdated() > newest.getLastUpdated()) {
+        if (newest) {
+          Logger.log('УВАГА: знайдено кілька форм із назвою «' +
+                     CONFIG.FORM_TITLE + '». Використовую найсвіжішу.');
+        }
+        newest = file;
+      }
+    }
+  }
+  if (newest) {
+    try {
+      return FormApp.openById(newest.getId());
+    } catch (e) {
+      Logger.log('Форму з Drive не відкрито: ' + e.message);
+    }
+  }
+
+  return null;
+}
+
+
+// =======================================================
+// ОНОВЛЕННЯ ЦІН У НАЯВНІЙ ФОРМІ
+// =======================================================
+
+function updatePricesInForm(form) {
+  const updated = [];
+
+  form.getItems().forEach(item => {
+    const title = item.getTitle();
+
+    if (title === Q.program) {
+      item.asMultipleChoiceItem().setChoiceValues(PROGRAM_CHOICES);
+      updated.push('вибір програми');
+    }
+
+    if (title === PROGRAM_BLOCK_TITLE) {
+      item.asPageBreakItem().setHelpText(PROGRAM_HELP);
+      updated.push('опис програм');
+    }
+
+    if (title === Q.budget) {
+      item.asMultipleChoiceItem().setChoiceValues(BUDGET_CHOICES);
+      updated.push('бюджет');
+    }
+  });
+
+  Logger.log(updated.length
+    ? 'У формі оновлено: ' + updated.join(', ') + '. Посилання не змінилося.'
+    : 'У формі не знайдено полів для оновлення (можливо, вже оновлені).');
+}
+
+
+// =======================================================
+// ТАБЛИЦЯ ВІДПОВІДЕЙ (створюється лише якщо її немає)
+// =======================================================
+
+function ensureSpreadsheet(form) {
+  let destinationId = null;
+  try {
+    destinationId = form.getDestinationId();
+  } catch (e) {
+    destinationId = null;
+  }
+
+  if (!destinationId) {
+    const spreadsheet = SpreadsheetApp.create(CONFIG.SHEET_TITLE);
+    form.setDestination(FormApp.DestinationType.SPREADSHEET, spreadsheet.getId());
+    destinationId = spreadsheet.getId();
+    Logger.log('Створено нову таблицю для відповідей.');
+  }
+
+  PropertiesService.getScriptProperties()
+    .setProperty('SPREADSHEET_ID', destinationId);
+
+  return SpreadsheetApp.openById(destinationId);
+}
+
+
+// =======================================================
+// ТРИГЕР АВТОМАТИЧНИХ ЛИСТІВ (перестворюється безпечно)
+// =======================================================
+
+function ensureTrigger(form) {
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'onFormSubmit') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  ScriptApp.newTrigger('onFormSubmit')
+    .forForm(form)
+    .onFormSubmit()
+    .create();
+
+  Logger.log('Тригер автоматичних листів налаштовано.');
+}
+
+
+// =======================================================
+// СТВОРЕННЯ ФОРМИ З НУЛЯ (START викликає це сам за потреби)
+// =======================================================
+
+function createNewForm() {
   const form = FormApp.create(CONFIG.FORM_TITLE);
   form.setTitle(CONFIG.FORM_TITLE);
   form.setDescription(
@@ -221,25 +408,12 @@ function setupSurveyForm() {
 
   // ===== БЛОК 4: ВИБІР ПРОГРАМИ =====
   form.addPageBreakItem()
-    .setTitle('Блок 4 із 5: Вибір програми')
-    .setHelpText(
-      '💎 ОГРАНКА — груповий онлайн-марафон. Старт, енергія групи, ' +
-      'перші відчутні результати. Вартість: ' + CONFIG.PRICES.ogranka + '.\n\n' +
-      '📱 Підписка — закритий Telegram-канал Людмили Бойко: практики, ' +
-      'ефіри, підтримка щодня. Гнучко і без довгих зобов\'язань. ' +
-      'Вартість: ' + CONFIG.PRICES.pidpyska + '.\n\n' +
-      '👑 ДІАНА — глибока програма на 3 місяці, персональна робота ' +
-      'до результату. Повна вартість: ' + CONFIG.PRICES.diana + '.'
-    );
+    .setTitle(PROGRAM_BLOCK_TITLE)
+    .setHelpText(PROGRAM_HELP);
 
   form.addMultipleChoiceItem()
     .setTitle(Q.program)
-    .setChoiceValues([
-      CHOICE.OGRANKA,
-      CHOICE.PIDPYSKA,
-      CHOICE.FULL,
-      CHOICE.UNSURE,
-    ])
+    .setChoiceValues(PROGRAM_CHOICES)
     .setRequired(true);
 
   form.addMultipleChoiceItem()
@@ -254,13 +428,7 @@ function setupSurveyForm() {
 
   form.addMultipleChoiceItem()
     .setTitle(Q.budget)
-    .setChoiceValues([
-      'До 750 грн',
-      '750–5000 грн',
-      '5000–15 000 грн',
-      'Понад 15 000 грн',
-      'Поки не готова інвестувати',
-    ])
+    .setChoiceValues(BUDGET_CHOICES)
     .setRequired(true);
 
   form.addCheckboxItem()
@@ -324,40 +492,12 @@ function setupSurveyForm() {
     ])
     .setRequired(true);
 
-  // ===== ТАБЛИЦЯ ДЛЯ ВІДПОВІДЕЙ =====
-  const spreadsheet = SpreadsheetApp.create(CONFIG.SHEET_TITLE);
-  form.setDestination(FormApp.DestinationType.SPREADSHEET, spreadsheet.getId());
-
-  // Запам'ятовуємо ID таблиці для onFormSubmit
-  PropertiesService.getScriptProperties()
-    .setProperty('SPREADSHEET_ID', spreadsheet.getId());
-
-  // ===== ТРИГЕР АВТОМАТИЧНОЇ ОБРОБКИ =====
-  ScriptApp.getProjectTriggers().forEach(t => {
-    if (t.getHandlerFunction() === 'onFormSubmit') {
-      ScriptApp.deleteTrigger(t);
-    }
-  });
-  ScriptApp.newTrigger('onFormSubmit')
-    .forForm(form)
-    .onFormSubmit()
-    .create();
-
-  Logger.log('=== Форму створено ===');
-  Logger.log('Посилання для учасниць: ' + form.getPublishedUrl());
-  Logger.log('Редагування форми: ' + form.getEditUrl());
-  Logger.log('Таблиця з відповідями: ' + spreadsheet.getUrl());
-
-  return {
-    formUrl: form.getPublishedUrl(),
-    editUrl: form.getEditUrl(),
-    sheetUrl: spreadsheet.getUrl(),
-  };
+  return form;
 }
 
 
 // =======================================================
-// КРОК 2: ОБРОБКА КОЖНОЇ ВІДПОВІДІ
+// ОБРОБКА КОЖНОЇ ВІДПОВІДІ (запускається тригером)
 // =======================================================
 
 function onFormSubmit(e) {
@@ -365,7 +505,7 @@ function onFormSubmit(e) {
     const data = parseResponse(e);
     Logger.log('Нова відповідь: ' + data.email);
 
-    saveToAnalyticsSheet(data);
+    saveToAnalyticsSheet(data, e);
 
     if (data.email) {
       sendPersonalizedEmail(data);
@@ -435,11 +575,23 @@ function parseResponse(e) {
 // ЗАПИС В АРКУШ «АНАЛІТИКА»
 // =======================================================
 
-function saveToAnalyticsSheet(data) {
-  const sheetId = PropertiesService.getScriptProperties()
+function saveToAnalyticsSheet(data, e) {
+  let sheetId = PropertiesService.getScriptProperties()
     .getProperty('SPREADSHEET_ID');
+
+  // Якщо ID не збережено — беремо таблицю прямо з форми
+  if (!sheetId && e && e.source) {
+    try {
+      sheetId = e.source.getDestinationId();
+      PropertiesService.getScriptProperties()
+        .setProperty('SPREADSHEET_ID', sheetId);
+    } catch (err) {
+      sheetId = null;
+    }
+  }
+
   if (!sheetId) {
-    Logger.log('SPREADSHEET_ID не знайдено — запустіть setupSurveyForm().');
+    Logger.log('Таблицю не знайдено — запустіть START().');
     return;
   }
 
@@ -558,70 +710,6 @@ function sendPersonalizedEmail(data) {
     subject: subject,
     body: body,
   });
-}
-
-
-// =======================================================
-// ОНОВЛЕННЯ ЦІН В УЖЕ СТВОРЕНІЙ ФОРМІ
-// (запускати, коли змінили PRICES у CONFIG, а форму
-// перестворювати не можна — посилання вже опубліковане)
-// =======================================================
-
-function updateFormPrices() {
-  // ID форми — з адреси редагування:
-  // https://docs.google.com/forms/d/ОЦЕЙ_ДОВГИЙ_КОД/edit
-  const FORM_ID = 'ВСТАВТЕ_СЮДИ_ID_ФОРМИ';
-
-  const form = FormApp.openById(FORM_ID);
-  let updated = [];
-
-  form.getItems().forEach(item => {
-    const title = item.getTitle();
-
-    // 1) Варіанти вибору програми — з актуальними цінами
-    if (title === Q.program) {
-      item.asMultipleChoiceItem().setChoiceValues([
-        CHOICE.OGRANKA,
-        CHOICE.PIDPYSKA,
-        CHOICE.FULL,
-        CHOICE.UNSURE,
-      ]);
-      updated.push('вибір програми');
-    }
-
-    // 2) Опис програм у заголовку блоку 4
-    if (title === 'Блок 4 із 5: Вибір програми') {
-      item.asPageBreakItem().setHelpText(
-        '💎 ОГРАНКА — груповий онлайн-марафон. Старт, енергія групи, ' +
-        'перші відчутні результати. Вартість: ' + CONFIG.PRICES.ogranka + '.\n\n' +
-        '📱 Підписка — закритий Telegram-канал Людмили Бойко: практики, ' +
-        'ефіри, підтримка щодня. Гнучко і без довгих зобов\'язань. ' +
-        'Вартість: ' + CONFIG.PRICES.pidpyska + '.\n\n' +
-        '👑 ДІАНА — глибока програма на 3 місяці, персональна робота ' +
-        'до результату. Повна вартість: ' + CONFIG.PRICES.diana + '.'
-      );
-      updated.push('опис блоку 4');
-    }
-
-    // 3) Діапазони бюджету — під нову ціну марафону
-    if (title === Q.budget) {
-      item.asMultipleChoiceItem().setChoiceValues([
-        'До 750 грн',
-        '750–5000 грн',
-        '5000–15 000 грн',
-        'Понад 15 000 грн',
-        'Поки не готова інвестувати',
-      ]);
-      updated.push('бюджет');
-    }
-  });
-
-  if (updated.length === 0) {
-    Logger.log('Нічого не оновлено — перевірте FORM_ID.');
-  } else {
-    Logger.log('Оновлено у формі: ' + updated.join(', ') +
-               '. Посилання на форму не змінилося.');
-  }
 }
 
 
