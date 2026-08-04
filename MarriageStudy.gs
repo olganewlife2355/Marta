@@ -540,6 +540,80 @@ function computePairs() {
 }
 
 
+// КРОК 8: Три окремі листи — по одному на кожну методику
+// Створює: SPANE_only, Conflict_only, ROD_only
+// Кожен лист можна завантажити окремо: Файл → Завантажити → .csv
+function exportByInstrument() {
+  Logger.log('⏳ Розділяємо відповіді по 3 методиках...');
+
+  var props = PropertiesService.getScriptProperties();
+  var sheetId = props.getProperty('RESPONSES_SHEET_ID');
+  if (!sheetId) {
+    Logger.log('❌ Спочатку запустіть exportAllResponses()');
+    return;
+  }
+  var ss = SpreadsheetApp.openById(sheetId);
+  var src = ss.getSheetByName('Clean_Responses');
+  if (!src) {
+    Logger.log('❌ Лист «Clean_Responses» не знайдено. Запустіть exportAllResponses()');
+    return;
+  }
+
+  var data = src.getDataRange().getValues();
+  if (data.length < 2) {
+    Logger.log('ℹ️ Немає даних у Clean_Responses.');
+    return;
+  }
+
+  var headers = data[0];
+  var idx = {};
+  headers.forEach(function(h, i) { idx[h] = i; });
+
+  var metaCols = ['Timestamp', 'Pair_Code', 'Gender', 'Age', 'Status', 'Duration', 'Children'];
+  var metaIndices = metaCols.map(function(c) { return idx[c]; });
+
+  function makeSheet_(name, itemPrefix, count) {
+    var existing = ss.getSheetByName(name);
+    if (existing) ss.deleteSheet(existing);
+    var sheet = ss.insertSheet(name);
+
+    var itemCols = [];
+    for (var i = 1; i <= count; i++) itemCols.push(itemPrefix + i);
+
+    var newHeaders = metaCols.concat(itemCols);
+    sheet.appendRow(newHeaders);
+
+    var rows = [];
+    data.slice(1).forEach(function(row) {
+      var out = metaIndices.map(function(i) { return row[i]; });
+      itemCols.forEach(function(c) { out.push(row[idx[c]]); });
+      rows.push(out);
+    });
+
+    if (rows.length > 0) {
+      sheet.getRange(2, 1, rows.length, newHeaders.length).setValues(rows);
+    }
+    sheet.setFrozenRows(1);
+    sheet.setFrozenColumns(3);
+    return rows.length;
+  }
+
+  var spaneN = makeSheet_('SPANE_only', 'SPANE_', 12);
+  var conflN = makeSheet_('Conflict_only', 'Conflict_', 32);
+  var rodN   = makeSheet_('ROD_only', 'ROD_', 36);
+
+  Logger.log('✅ Розділено на 3 окремі листи:');
+  Logger.log('   • SPANE_only     — ' + spaneN + ' респондентів');
+  Logger.log('   • Conflict_only  — ' + conflN + ' респондентів');
+  Logger.log('   • ROD_only       — ' + rodN + ' респондентів');
+  Logger.log('');
+  Logger.log('📥 Щоб завантажити окремий CSV:');
+  Logger.log('   1. Відкрийте таблицю: ' + ss.getUrl());
+  Logger.log('   2. Внизу оберіть потрібний лист (SPANE_only / Conflict_only / ROD_only)');
+  Logger.log('   3. Меню: Файл → Завантажити → Значення, розділені комами (.csv)');
+}
+
+
 // Виводить усі ключові посилання проєкту в Logs
 function openForm() {
   var p = PropertiesService.getScriptProperties();
