@@ -9,10 +9,18 @@
  * ВСТАНОВЛЕННЯ:
  * 1. Додайте цей файл (TestAutoresponder.gs) у ТОЙ САМИЙ проект
  *    Apps Script, де лежить Code.gs (script.google.com).
- * 2. Вставте ID вашої форми у TEST_FORM_ID нижче.
- *    ID — це довгий рядок з URL редагування форми:
+ * 2. Запустіть функцію submitTestResponses(). Скрипт сам знайде
+ *    форму «ChromaFit — Кольоровий профіль компетенцій» у вашому
+ *    Google Drive за назвою (FORM_NAME із Code.gs).
+ *
+ * УВАГА щодо ID: посилання виду
+ *    https://docs.google.com/forms/d/e/1FAIpQLSc.../viewform
+ * — це посилання ДЛЯ РЕСПОНДЕНТІВ, його ID для скрипта НЕ підходить.
+ * Якщо хочете вказати форму вручну, відкрийте її в режимі
+ * редагування і скопіюйте ID з URL:
  *    https://docs.google.com/forms/d/<ОЦЕ_ОСЬ_ID>/edit
- * 3. Запустіть функцію submitTestResponses().
+ * та вставте у TEST_FORM_ID нижче. Якщо TEST_FORM_ID порожній —
+ * працює автопошук за назвою.
  *
  * ВАЖЛИВО:
  * - Кожен «псевдонім» має префікс TEST_ (TEST_P01_A, TEST_S03…),
@@ -30,7 +38,9 @@
 // НАЛАШТУВАННЯ ТЕСТУ
 // =======================================================
 
-const TEST_FORM_ID = 'ВСТАВТЕ_СЮДИ_ID_ФОРМИ';
+// Залиште порожнім ('') — форма знайдеться автоматично за назвою.
+// Або вставте ID з URL РЕДАГУВАННЯ (docs.google.com/forms/d/<ID>/edit).
+const TEST_FORM_ID = '';
 
 const TEST_PAIRS = 20;  // пар (по 2 відповіді) = 40
 const TEST_SOLO  = 7;   // соло-відповідей       = 7  → разом 47
@@ -49,11 +59,59 @@ const SUBMIT_DELAY_MS = 400;
 
 
 // =======================================================
+// ПОШУК ФОРМИ
+// =======================================================
+
+/**
+ * Повертає форму: за TEST_FORM_ID, якщо вказано, інакше шукає
+ * у Drive форму з назвою FORM_NAME (константа з Code.gs).
+ */
+function getTestForm() {
+  if (TEST_FORM_ID) {
+    return FormApp.openById(TEST_FORM_ID);
+  }
+
+  const files = DriveApp.getFilesByType(MimeType.GOOGLE_FORMS);
+  const matches = [];
+  while (files.hasNext()) {
+    const f = files.next();
+    if (f.getName() === FORM_NAME && !f.isTrashed()) {
+      matches.push(f);
+    }
+  }
+
+  if (matches.length === 0) {
+    throw new Error('Форму «' + FORM_NAME + '» не знайдено у Drive. ' +
+                    'Вставте ID форми (з URL редагування) у TEST_FORM_ID.');
+  }
+  if (matches.length > 1) {
+    Logger.log('УВАГА: знайдено ' + matches.length + ' форм із назвою «' +
+               FORM_NAME + '». Використовую найновішу. ID усіх:');
+    matches.forEach(f => Logger.log('  ' + f.getId() +
+                                    ' (створено ' + f.getDateCreated() + ')'));
+    matches.sort((a, b) => b.getDateCreated() - a.getDateCreated());
+  }
+
+  const form = FormApp.openById(matches[0].getId());
+  Logger.log('Знайдено форму: ' + form.getEditUrl());
+  return form;
+}
+
+/** Просто вивести ID та URL форми (для довідки). */
+function logFormId() {
+  const form = getTestForm();
+  Logger.log('ID форми: ' + form.getId());
+  Logger.log('URL редагування: ' + form.getEditUrl());
+  Logger.log('URL для респондентів: ' + form.getPublishedUrl());
+}
+
+
+// =======================================================
 // ГОЛОВНА ФУНКЦІЯ
 // =======================================================
 
 function submitTestResponses() {
-  const form = FormApp.openById(TEST_FORM_ID);
+  const form = getTestForm();
 
   if (PAUSE_SUBMIT_TRIGGER) {
     let removed = 0;
@@ -334,7 +392,7 @@ function padNum(n) {
  * справжніх відповідей.
  */
 function deleteAllFormResponses() {
-  const form = FormApp.openById(TEST_FORM_ID);
+  const form = getTestForm();
   const count = form.getResponses().length;
   form.deleteAllResponses();
   Logger.log('Видалено ' + count + ' відповідей із форми.');
