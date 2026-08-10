@@ -12,10 +12,11 @@
  *  ЯК ЗАПУСТИТИ:
  *  1. Оберіть угорі функцію submitTestResponses → «Виконати».
  *  2. Прогрес видно у «Журнал виконання» (Ctrl+Enter).
- *  3. Якщо виконання зупинилося за лімітом часу (6 хв) —
- *     ПРОСТО ЗАПУСТІТЬ submitTestResponses ЩЕ РАЗ:
- *     скрипт продовжить з того місця, де зупинився
- *     (прогрес зберігається автоматично).
+ *  3. Ліміт часу (6 хв) обходиться АВТОМАТИЧНО: скрипт зупиниться
+ *     завчасно, сам поставить тригер і продовжить через ~1 хвилину
+ *     у фоні — нічого перезапускати не треба. Фонові запуски видно
+ *     у меню «Виконання» (ліворуч, іконка ▶ зі списком).
+ *     Просто зачекайте ~10 хвилин і перевірте відповіді форми.
  *
  *  ДОДАТКОВІ ФУНКЦІЇ:
  *  - resetTestProgress()      — скинути лічильник прогресу
@@ -50,6 +51,7 @@ function submitTestResponses() {
   var soloDone = parseInt(props.getProperty('TEST_SOLO_DONE') || '0', 10);
 
   if (pairsDone >= TEST_PAIRS && soloDone >= TEST_SOLO) {
+    clearContinuationTriggers_();
     Logger.log('Усі 47 тестових відповідей уже надіслано раніше.');
     Logger.log('Щоб згенерувати заново: спершу запустіть resetTestProgress().');
     return;
@@ -100,22 +102,45 @@ function submitTestResponses() {
                (TEST_PAIRS * 2 + s) + '/47)');
   }
 
+  clearContinuationTriggers_();
   Logger.log('════════════════════════════════════');
   Logger.log('ГОТОВО: усі 47 тестових відповідей надіслано.');
   Logger.log('Усього відповідей у формі зараз: ' + form.getResponses().length);
 }
 
 
-// Повідомлення при зупинці за часом
+// Зупинка за часом: плануємо автоматичне продовження через ~1 хв
 function logTimeLimit_(pairsDone, soloDone) {
   var total = pairsDone * 2 + soloDone;
+  scheduleContinuation_();
   Logger.log('════════════════════════════════════');
   Logger.log('Наближається ліміт часу виконання (6 хв).');
   Logger.log('Надіслано поки що: ' + total + '/47 ' +
              '(пар: ' + pairsDone + '/' + TEST_PAIRS +
              ', соло: ' + soloDone + '/' + TEST_SOLO + ').');
-  Logger.log('▶ ПРОСТО ЗАПУСТІТЬ submitTestResponses ЩЕ РАЗ — ' +
-             'скрипт продовжить звідси, дублікатів не буде.');
+  Logger.log('▶ ПРОДОВЖЕННЯ ЗАПЛАНОВАНО АВТОМАТИЧНО через ~1 хвилину — ' +
+             'нічого робити не треба. Фоновий запуск буде видно у меню ' +
+             '«Виконання». Дублікатів не буде.');
+}
+
+
+// Одноразовий тригер, який сам перезапустить submitTestResponses
+function scheduleContinuation_() {
+  clearContinuationTriggers_();
+  ScriptApp.newTrigger('submitTestResponses')
+    .timeBased()
+    .after(60 * 1000)
+    .create();
+}
+
+
+// Прибираємо тригери продовження (щоб не накопичувались)
+function clearContinuationTriggers_() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'submitTestResponses') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
 }
 
 
