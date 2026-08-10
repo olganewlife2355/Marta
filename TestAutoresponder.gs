@@ -38,9 +38,9 @@
 // НАЛАШТУВАННЯ ТЕСТУ
 // =======================================================
 
-// Залиште порожнім ('') — форма знайдеться автоматично за назвою.
-// Або вставте ID з URL РЕДАГУВАННЯ (docs.google.com/forms/d/<ID>/edit).
-const TEST_FORM_ID = '';
+// ID з URL редагування (docs.google.com/forms/d/<ID>/edit).
+// Якщо порожній ('') — форма знайдеться автоматично за назвою.
+const TEST_FORM_ID = '1mBDDIAxktfi9slrlcwDqqTs2Vb-bEgIwFW4hzrKzdBw';
 
 const TEST_PAIRS = 20;  // пар (по 2 відповіді) = 40
 const TEST_SOLO  = 7;   // соло-відповідей       = 7  → разом 47
