@@ -2,35 +2,37 @@
  * ════════════════════════════════════════════════════════════════
  *  АВТОРЕСПОНДЕНТ для тестування форми
  *  «Психологічне дослідження подружніх стосунків»
- *  (версія 4 — з аномальними/екстремальними респондентами)
+ *  (версія 5 — окрема функція для 10 аномальних відповідей)
  * ════════════════════════════════════════════════════════════════
- *  Генерує та надсилає 47 тестових відповідей:
- *    - 20 пар  (40 відповідей: жінка + чоловік зі СПІЛЬНИМ кодом
- *               TEST-P-001 … TEST-P-020, спільна демографія)
- *    - 7 соло  (TEST-S-001 … TEST-S-007, випадкова стать)
+ *  ДВІ НЕЗАЛЕЖНІ ФУНКЦІЇ:
  *
- *  АНОМАЛЬНІ РЕСПОНДЕНТИ (для перевірки чистки даних):
- *    TEST-P-018 — обоє партнерів відповідають ЛИШЕ середніми
- *                 значеннями (класичний «midline responding»)
- *    TEST-P-019 — жінка на все відповідає МАКСИМУМОМ,
- *                 чоловік — МІНІМУМОМ (дискордантна пара)
- *    TEST-P-020 — обоє «зигзаг» (макс/мін по черзі) +
- *                 аномальний вік: жінці 17, чоловікові 85
- *    TEST-S-006 — суцільний максимум («straight-lining»)
- *    TEST-S-007 — суцільна середина + вік 90 при шлюбі
- *                 «Більше 15 років»
- *  Решта (17 пар і 5 соло) — звичайні реалістичні відповіді.
+ *  1) submitTestResponses() — 47 ЗВИЧАЙНИХ відповідей:
+ *     - 20 пар (жінка + чоловік зі спільним кодом
+ *       TEST-P-001 … TEST-P-020, спільна демографія)
+ *     - 7 соло (TEST-S-001 … TEST-S-007)
+ *
+ *  2) submitAnomalousResponses() — 10 АНОМАЛЬНИХ відповідей
+ *     (докидаються ДОДАТКОВО, основні 47 не чіпають):
+ *     TEST-AP-001 — обоє партнерів усюди середина (midline)
+ *     TEST-AP-002 — жінка все МАКСИМУМ, чоловік все МІНІМУМ
+ *     TEST-AP-003 — обоє «зигзаг» (макс/мін по черзі),
+ *                   вік-викиди: 17 і 85
+ *     TEST-AP-004 — суперечлива демографія партнерів: різна
+ *                   тривалість шлюбу («Менше 1 року» vs «Більше
+ *                   15 років»), вік 19 і 78, різні відповіді
+ *                   про дітей
+ *     TEST-AS-001 — соло, суцільний максимум (straight-lining)
+ *     TEST-AS-002 — соло, суцільна середина + вік 90
  *
  *  ЯК ЗАПУСТИТИ:
- *  1. Оберіть угорі функцію submitTestResponses → «Виконати».
- *  2. Прогрес видно у «Журнал виконання» (Ctrl+Enter).
- *  3. Ліміт часу (6 хв) обходиться АВТОМАТИЧНО: скрипт зупиниться
- *     завчасно, сам поставить тригер і продовжить через ~1 хвилину
- *     у фоні — нічого перезапускати не треба. Фонові запуски видно
- *     у меню «Виконання» (ліворуч, іконка ▶ зі списком).
+ *  1. Оберіть угорі submitTestResponses → «Виконати» (47 звичайних;
+ *     ліміт 6 хв обходиться автоматично — скрипт сам продовжить
+ *     через тригер, фонові запуски видно у меню «Виконання»).
+ *  2. Коли 47 готові — оберіть submitAnomalousResponses →
+ *     «Виконати» (10 аномальних, це швидко). Разом буде 57.
  *
  *  ДОДАТКОВІ ФУНКЦІЇ:
- *  - resetTestProgress()      — скинути лічильник прогресу
+ *  - resetTestProgress()      — скинути лічильник прогресу 47-ми
  *  - deleteAllFormResponses() — видалити ВСІ відповіді форми
  *    і скинути прогрес (лише поки немає справжніх відповідей!)
  * ════════════════════════════════════════════════════════════════
@@ -41,35 +43,41 @@
 // Якщо залишити порожнім (''), візьметься FORM_ID зі ScriptProperties.
 var TEST_FORM_ID = '1mBDDIAxktfi9slrlcwDqqTs2Vb-bEgIwFW4hzrKzdBw';
 
-var TEST_PAIRS = 20;             // пар (по 2 відповіді)  = 40
-var TEST_SOLO = 7;               // соло-відповідей       = 7  → разом 47
+var TEST_PAIRS = 20;             // звичайних пар (по 2 відповіді) = 40
+var TEST_SOLO = 7;               // звичайних соло                 = 7
 var TEST_CODE_PREFIX = 'TEST-';  // префікс кодів тестових відповідей
 
 // Запас до 6-хвилинного ліміту: зупиняємось на 4.5 хв
 // і автоматично продовжуємо через тригер
 var MAX_RUNTIME_MS = 4.5 * 60 * 1000;
 
-// ── Аномальні респонденти ───────────────────────────────────────
-// Стилі відповідей: 'max' — усе максимум; 'min' — усе мінімум;
+// ── 10 аномальних відповідей (submitAnomalousResponses) ─────────
+// Стилі: 'max' — усе максимум; 'min' — усе мінімум;
 // 'mid' — усе середнє; 'zigzag' — макс/мін по черзі.
-// ageOverride / durationOverride — підміна демографії.
-var PAIR_ANOMALIES = {
-  18: { wife: { style: 'mid' },
-        husband: { style: 'mid' } },
-  19: { wife: { style: 'max' },
-        husband: { style: 'min' } },
-  20: { wife: { style: 'zigzag', ageOverride: '17' },
-        husband: { style: 'zigzag', ageOverride: '85' } }
-};
-var SOLO_ANOMALIES = {
-  6: { style: 'max' },
-  7: { style: 'mid', ageOverride: '90',
-       durationOverride: 'Більше 15 років' }
-};
+var ANOMALOUS_PAIRS = [
+  { code: 'AP-001', label: 'обоє середина (midline)',
+    wife: { style: 'mid' }, husband: { style: 'mid' } },
+  { code: 'AP-002', label: 'жінка max / чоловік min (дискордантна)',
+    wife: { style: 'max' }, husband: { style: 'min' } },
+  { code: 'AP-003', label: 'зигзаг + вік 17/85',
+    wife: { style: 'zigzag', ageOverride: '17' },
+    husband: { style: 'zigzag', ageOverride: '85' } },
+  { code: 'AP-004', label: 'суперечлива демографія партнерів',
+    mismatch: true, // демографія партнерів НЕ узгоджується
+    wife: { ageOverride: '19', durationOverride: 'Менше 1 року' },
+    husband: { ageOverride: '78', durationOverride: 'Більше 15 років' } }
+];
+var ANOMALOUS_SOLO = [
+  { code: 'AS-001', label: 'суцільний максимум',
+    anomaly: { style: 'max' } },
+  { code: 'AS-002', label: 'середина + вік 90',
+    anomaly: { style: 'mid', ageOverride: '90',
+               durationOverride: 'Більше 15 років' } }
+];
 
 
 // ════════════════════════════════════════════════════════════════
-//  ГОЛОВНА ФУНКЦІЯ — запускайте саме її
+//  ФУНКЦІЯ 1: 47 звичайних відповідей
 //  (при зупинці за часом продовжиться сама, через тригер)
 // ════════════════════════════════════════════════════════════════
 function submitTestResponses() {
@@ -80,8 +88,9 @@ function submitTestResponses() {
 
   if (pairsDone >= TEST_PAIRS && soloDone >= TEST_SOLO) {
     clearContinuationTriggers_();
-    Logger.log('Усі 47 тестових відповідей уже надіслано раніше.');
+    Logger.log('Усі 47 звичайних відповідей уже надіслано раніше.');
     Logger.log('Щоб згенерувати заново: спершу запустіть resetTestProgress().');
+    Logger.log('Аномальні 10 надсилаються окремо: submitAnomalousResponses().');
     return;
   }
 
@@ -105,16 +114,12 @@ function submitTestResponses() {
 
     var code = TEST_CODE_PREFIX + 'P-' + pad3_(p);
     var shared = makeSharedPairData_();
-    var anomaly = PAIR_ANOMALIES[p] || {};
 
-    submitOneResponse_(form, plan,
-      makePersona_(code, 'Жіноча', shared, anomaly.wife));
-    submitOneResponse_(form, plan,
-      makePersona_(code, 'Чоловіча', shared, anomaly.husband));
+    submitOneResponse_(form, plan, makePersona_(code, 'Жіноча', shared, null));
+    submitOneResponse_(form, plan, makePersona_(code, 'Чоловіча', shared, null));
 
     props.setProperty('TEST_PAIRS_DONE', String(p));
-    Logger.log('Пара ' + code + (PAIR_ANOMALIES[p] ? ' [АНОМАЛЬНА]' : '') +
-               ' надіслана (' + (p * 2) + '/47)');
+    Logger.log('Пара ' + code + ' надіслана (' + (p * 2) + '/47)');
   }
 
   // ── Соло ──────────────────────────────────────────────────
@@ -127,21 +132,67 @@ function submitTestResponses() {
     var soloCode = TEST_CODE_PREFIX + 'S-' + pad3_(s);
     var soloGender = Math.random() < 0.5 ? 'Жіноча' : 'Чоловіча';
 
-    submitOneResponse_(form, plan,
-      makePersona_(soloCode, soloGender, null, SOLO_ANOMALIES[s]));
+    submitOneResponse_(form, plan, makePersona_(soloCode, soloGender, null, null));
 
     props.setProperty('TEST_SOLO_DONE', String(s));
-    Logger.log('Соло ' + soloCode + ' (' + soloGender + ')' +
-               (SOLO_ANOMALIES[s] ? ' [АНОМАЛЬНЕ]' : '') +
-               ' надіслано (' + (TEST_PAIRS * 2 + s) + '/47)');
+    Logger.log('Соло ' + soloCode + ' (' + soloGender + ') надіслано (' +
+               (TEST_PAIRS * 2 + s) + '/47)');
   }
 
   clearContinuationTriggers_();
   Logger.log('════════════════════════════════════');
-  Logger.log('ГОТОВО: усі 47 тестових відповідей надіслано.');
-  Logger.log('Аномальні: TEST-P-018 (середина), TEST-P-019 (макс/мін), ' +
-             'TEST-P-020 (зигзаг, вік 17/85), TEST-S-006 (максимум), ' +
-             'TEST-S-007 (середина, вік 90).');
+  Logger.log('ГОТОВО: усі 47 звичайних відповідей надіслано.');
+  Logger.log('Тепер можна запустити submitAnomalousResponses() — ' +
+             'додасть 10 аномальних.');
+  Logger.log('Усього відповідей у формі зараз: ' + form.getResponses().length);
+}
+
+
+// ════════════════════════════════════════════════════════════════
+//  ФУНКЦІЯ 2: 10 аномальних відповідей (окремо від основних 47)
+//  4 пари (8 відповідей) + 2 соло. Це швидко, без тригерів.
+// ════════════════════════════════════════════════════════════════
+function submitAnomalousResponses() {
+  var form = getTestForm_();
+  Logger.log('Форма: ' + form.getTitle());
+
+  var plan = buildFormPlan_(form);
+  Logger.log('Прочитано питань: ' + plan.length +
+             '. Надсилаю 10 аномальних відповідей...');
+
+  var submitted = 0;
+
+  ANOMALOUS_PAIRS.forEach(function(def) {
+    var code = TEST_CODE_PREFIX + def.code;
+    // mismatch: демографія партнерів генерується НЕЗАЛЕЖНО
+    // (і додатково розводиться overrides) — пара «не сходиться»
+    var shared = def.mismatch ? null : makeSharedPairData_();
+
+    submitOneResponse_(form, plan,
+      makePersona_(code, 'Жіноча', shared, def.wife));
+    submitted++;
+    submitOneResponse_(form, plan,
+      makePersona_(code, 'Чоловіча', def.mismatch ? null : shared, def.husband));
+    submitted++;
+
+    Logger.log('Аномальна пара ' + code + ' (' + def.label + ') — ' +
+               submitted + '/10');
+  });
+
+  ANOMALOUS_SOLO.forEach(function(def) {
+    var code = TEST_CODE_PREFIX + def.code;
+    var gender = Math.random() < 0.5 ? 'Жіноча' : 'Чоловіча';
+
+    submitOneResponse_(form, plan, makePersona_(code, gender, null, def.anomaly));
+    submitted++;
+
+    Logger.log('Аномальне соло ' + code + ' (' + def.label + ') — ' +
+               submitted + '/10');
+  });
+
+  Logger.log('════════════════════════════════════');
+  Logger.log('ГОТОВО: 10 аномальних відповідей надіслано ' +
+             '(коди TEST-AP-001…004, TEST-AS-001…002).');
   Logger.log('Усього відповідей у формі зараз: ' + form.getResponses().length);
 }
 
@@ -199,7 +250,7 @@ function getTestForm_() {
 
 // ════════════════════════════════════════════════════════════════
 //  План форми: читаємо всі питання, тексти варіантів і межі шкал
-//  ОДИН раз, щоб не смикати сервер на кожній із 47 відповідей
+//  ОДИН раз, щоб не смикати сервер на кожній відповіді
 // ════════════════════════════════════════════════════════════════
 function buildFormPlan_(form) {
   var plan = [];
@@ -291,7 +342,7 @@ function makePersona_(code, gender, shared, anomaly) {
     persona.children = shared.children;
     persona.age = String(shared.baseAge + Math.floor(Math.random() * 5));
   } else {
-    // Соло-учасник
+    // Соло-учасник (або партнер «неузгодженої» пари)
     persona.status = pick_([
       'Одружений / Заміжня (офіційний шлюб)',
       'Одружений / Заміжня (офіційний шлюб)',
@@ -440,7 +491,7 @@ function pad3_(n) {
 
 
 // ════════════════════════════════════════════════════════════════
-//  Скинути прогрес (щоб згенерувати 47 відповідей заново)
+//  Скинути прогрес основних 47 (щоб згенерувати їх заново)
 // ════════════════════════════════════════════════════════════════
 function resetTestProgress() {
   var props = PropertiesService.getScriptProperties();
