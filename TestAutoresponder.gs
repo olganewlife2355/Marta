@@ -2,12 +2,24 @@
  * ════════════════════════════════════════════════════════════════
  *  АВТОРЕСПОНДЕНТ для тестування форми
  *  «Психологічне дослідження подружніх стосунків»
- *  (версія 2 — швидка, з продовженням після ліміту часу)
+ *  (версія 4 — з аномальними/екстремальними респондентами)
  * ════════════════════════════════════════════════════════════════
  *  Генерує та надсилає 47 тестових відповідей:
  *    - 20 пар  (40 відповідей: жінка + чоловік зі СПІЛЬНИМ кодом
  *               TEST-P-001 … TEST-P-020, спільна демографія)
  *    - 7 соло  (TEST-S-001 … TEST-S-007, випадкова стать)
+ *
+ *  АНОМАЛЬНІ РЕСПОНДЕНТИ (для перевірки чистки даних):
+ *    TEST-P-018 — обоє партнерів відповідають ЛИШЕ середніми
+ *                 значеннями (класичний «midline responding»)
+ *    TEST-P-019 — жінка на все відповідає МАКСИМУМОМ,
+ *                 чоловік — МІНІМУМОМ (дискордантна пара)
+ *    TEST-P-020 — обоє «зигзаг» (макс/мін по черзі) +
+ *                 аномальний вік: жінці 17, чоловікові 85
+ *    TEST-S-006 — суцільний максимум («straight-lining»)
+ *    TEST-S-007 — суцільна середина + вік 90 при шлюбі
+ *                 «Більше 15 років»
+ *  Решта (17 пар і 5 соло) — звичайні реалістичні відповіді.
  *
  *  ЯК ЗАПУСТИТИ:
  *  1. Оберіть угорі функцію submitTestResponses → «Виконати».
@@ -16,11 +28,9 @@
  *     завчасно, сам поставить тригер і продовжить через ~1 хвилину
  *     у фоні — нічого перезапускати не треба. Фонові запуски видно
  *     у меню «Виконання» (ліворуч, іконка ▶ зі списком).
- *     Просто зачекайте ~10 хвилин і перевірте відповіді форми.
  *
  *  ДОДАТКОВІ ФУНКЦІЇ:
  *  - resetTestProgress()      — скинути лічильник прогресу
- *    (якщо хочете згенерувати 47 відповідей заново)
  *  - deleteAllFormResponses() — видалити ВСІ відповіді форми
  *    і скинути прогрес (лише поки немає справжніх відповідей!)
  * ════════════════════════════════════════════════════════════════
@@ -36,13 +46,31 @@ var TEST_SOLO = 7;               // соло-відповідей       = 7  →
 var TEST_CODE_PREFIX = 'TEST-';  // префікс кодів тестових відповідей
 
 // Запас до 6-хвилинного ліміту: зупиняємось на 4.5 хв
-// і просимо запустити ще раз (прогрес збережено)
+// і автоматично продовжуємо через тригер
 var MAX_RUNTIME_MS = 4.5 * 60 * 1000;
+
+// ── Аномальні респонденти ───────────────────────────────────────
+// Стилі відповідей: 'max' — усе максимум; 'min' — усе мінімум;
+// 'mid' — усе середнє; 'zigzag' — макс/мін по черзі.
+// ageOverride / durationOverride — підміна демографії.
+var PAIR_ANOMALIES = {
+  18: { wife: { style: 'mid' },
+        husband: { style: 'mid' } },
+  19: { wife: { style: 'max' },
+        husband: { style: 'min' } },
+  20: { wife: { style: 'zigzag', ageOverride: '17' },
+        husband: { style: 'zigzag', ageOverride: '85' } }
+};
+var SOLO_ANOMALIES = {
+  6: { style: 'max' },
+  7: { style: 'mid', ageOverride: '90',
+       durationOverride: 'Більше 15 років' }
+};
 
 
 // ════════════════════════════════════════════════════════════════
 //  ГОЛОВНА ФУНКЦІЯ — запускайте саме її
-//  (повторний запуск продовжує з місця зупинки)
+//  (при зупинці за часом продовжиться сама, через тригер)
 // ════════════════════════════════════════════════════════════════
 function submitTestResponses() {
   var startTime = Date.now();
@@ -64,7 +92,7 @@ function submitTestResponses() {
                TEST_PAIRS + ', соло ' + soloDone + '/' + TEST_SOLO);
   }
 
-  // Читаємо структуру форми ОДИН раз (це і було вузьке місце v1)
+  // Читаємо структуру форми ОДИН раз
   var plan = buildFormPlan_(form);
   Logger.log('Прочитано питань: ' + plan.length + '. Починаю надсилання...');
 
@@ -77,12 +105,16 @@ function submitTestResponses() {
 
     var code = TEST_CODE_PREFIX + 'P-' + pad3_(p);
     var shared = makeSharedPairData_();
+    var anomaly = PAIR_ANOMALIES[p] || {};
 
-    submitOneResponse_(form, plan, makePersona_(code, 'Жіноча', shared));
-    submitOneResponse_(form, plan, makePersona_(code, 'Чоловіча', shared));
+    submitOneResponse_(form, plan,
+      makePersona_(code, 'Жіноча', shared, anomaly.wife));
+    submitOneResponse_(form, plan,
+      makePersona_(code, 'Чоловіча', shared, anomaly.husband));
 
     props.setProperty('TEST_PAIRS_DONE', String(p));
-    Logger.log('Пара ' + code + ' надіслана (' + (p * 2) + '/47)');
+    Logger.log('Пара ' + code + (PAIR_ANOMALIES[p] ? ' [АНОМАЛЬНА]' : '') +
+               ' надіслана (' + (p * 2) + '/47)');
   }
 
   // ── Соло ──────────────────────────────────────────────────
@@ -95,16 +127,21 @@ function submitTestResponses() {
     var soloCode = TEST_CODE_PREFIX + 'S-' + pad3_(s);
     var soloGender = Math.random() < 0.5 ? 'Жіноча' : 'Чоловіча';
 
-    submitOneResponse_(form, plan, makePersona_(soloCode, soloGender, null));
+    submitOneResponse_(form, plan,
+      makePersona_(soloCode, soloGender, null, SOLO_ANOMALIES[s]));
 
     props.setProperty('TEST_SOLO_DONE', String(s));
-    Logger.log('Соло ' + soloCode + ' (' + soloGender + ') надіслано (' +
-               (TEST_PAIRS * 2 + s) + '/47)');
+    Logger.log('Соло ' + soloCode + ' (' + soloGender + ')' +
+               (SOLO_ANOMALIES[s] ? ' [АНОМАЛЬНЕ]' : '') +
+               ' надіслано (' + (TEST_PAIRS * 2 + s) + '/47)');
   }
 
   clearContinuationTriggers_();
   Logger.log('════════════════════════════════════');
   Logger.log('ГОТОВО: усі 47 тестових відповідей надіслано.');
+  Logger.log('Аномальні: TEST-P-018 (середина), TEST-P-019 (макс/мін), ' +
+             'TEST-P-020 (зигзаг, вік 17/85), TEST-S-006 (максимум), ' +
+             'TEST-S-007 (середина, вік 90).');
   Logger.log('Усього відповідей у формі зараз: ' + form.getResponses().length);
 }
 
@@ -207,7 +244,9 @@ function buildFormPlan_(form) {
       var scaleItem = item.asScaleItem();
       if (/^\d+\. Я відчував/.test(title)) {
         plan.push({ kind: 'spane', branch: branch, item: scaleItem,
-                    spaneIdx: spaneIdx++ });
+                    spaneIdx: spaneIdx++,
+                    min: scaleItem.getLowerBound(),
+                    max: scaleItem.getUpperBound() });
       } else {
         plan.push({ kind: 'scaleRandom', branch: branch, item: scaleItem,
                     min: scaleItem.getLowerBound(),
@@ -239,8 +278,11 @@ function makeSharedPairData_() {
            children: children, baseAge: baseAge };
 }
 
-function makePersona_(code, gender, shared) {
-  var persona = { code: code, gender: gender };
+// anomaly (необов'язково): { style, ageOverride, durationOverride }
+function makePersona_(code, gender, shared, anomaly) {
+  anomaly = anomaly || {};
+  var persona = { code: code, gender: gender,
+                  style: anomaly.style || 'normal' };
 
   if (shared) {
     // Учасник пари: спільна демографія, вік близький до партнерського
@@ -262,8 +304,13 @@ function makePersona_(code, gender, shared) {
     persona.age = String(22 + Math.floor(Math.random() * 25));
   }
 
+  // Аномальні підміни демографії
+  if (anomaly.ageOverride) persona.age = anomaly.ageOverride;
+  if (anomaly.durationOverride) persona.duration = anomaly.durationOverride;
+
   // SPANE: 12 айтемів (1-5). Позитивні та негативні узгоджені:
   // що вище благополуччя — то вищі позитивні й нижчі негативні.
+  // (Для аномальних стилів ці значення буде проігноровано.)
   var wellbeing = 2 + Math.floor(Math.random() * 3); // 2..4
   var positiveIdx = [0, 2, 4, 6, 9, 11]; // Позитивно, Добре, Приємно…
   persona.spane = [];
@@ -282,6 +329,7 @@ function makePersona_(code, gender, shared) {
 // ════════════════════════════════════════════════════════════════
 function submitOneResponse_(form, plan, persona) {
   var formResponse = form.createResponse();
+  var answered = 0; // лічильник відповідей — потрібен для стилю «зигзаг»
 
   plan.forEach(function(q) {
     // Заповнюємо спільну частину і тільки гілку своєї статі —
@@ -308,22 +356,53 @@ function submitOneResponse_(form, plan, persona) {
         formResponse.withItemResponse(q.item.createResponse(persona.children));
         break;
       case 'mcRandom':
-        // випадковий варіант із реального списку відповідей питання
-        var choice = q.choices[centeredIndex_(q.choices.length)];
-        formResponse.withItemResponse(q.item.createResponse(choice));
+        var idx = styleChoiceIndex_(persona.style, q.choices.length, answered);
+        formResponse.withItemResponse(q.item.createResponse(q.choices[idx]));
         break;
       case 'spane':
-        formResponse.withItemResponse(
-          q.item.createResponse(persona.spane[q.spaneIdx]));
+        var vs = (persona.style === 'normal') ?
+          persona.spane[q.spaneIdx] :
+          styleScaleValue_(persona.style, q.min, q.max, answered);
+        formResponse.withItemResponse(q.item.createResponse(vs));
         break;
       case 'scaleRandom':
-        formResponse.withItemResponse(
-          q.item.createResponse(randInt_(q.min, q.max)));
+        var vr = (persona.style === 'normal') ?
+          randInt_(q.min, q.max) :
+          styleScaleValue_(persona.style, q.min, q.max, answered);
+        formResponse.withItemResponse(q.item.createResponse(vr));
         break;
     }
+    answered++;
   });
 
   formResponse.submit();
+}
+
+
+// ════════════════════════════════════════════════════════════════
+//  Стилі відповідей (для аномальних респондентів)
+// ════════════════════════════════════════════════════════════════
+
+// Індекс варіанта у списку з n відповідей
+function styleChoiceIndex_(style, n, counter) {
+  switch (style) {
+    case 'max': return n - 1;                        // завжди останній
+    case 'min': return 0;                            // завжди перший
+    case 'mid': return Math.floor((n - 1) / 2);      // завжди середній
+    case 'zigzag': return (counter % 2 === 0) ? n - 1 : 0;
+    default: return centeredIndex_(n);               // 'normal'
+  }
+}
+
+// Значення шкали від min до max
+function styleScaleValue_(style, min, max, counter) {
+  switch (style) {
+    case 'max': return max;
+    case 'min': return min;
+    case 'mid': return Math.round((min + max) / 2);
+    case 'zigzag': return (counter % 2 === 0) ? max : min;
+    default: return randInt_(min, max);
+  }
 }
 
 
