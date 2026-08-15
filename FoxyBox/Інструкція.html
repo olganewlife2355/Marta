@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>FoxyBox — встановлення</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* FoxyBox committed dark identity — matches the app itself (neon-fox world). */
+  :root{
+    --bg:#0a0d0c; --surface:#14181a; --surface-2:#0f1413;
+    --line:rgba(255,255,255,.08); --line-strong:rgba(255,255,255,.14);
+    --accent:#3ee0c0; --accent-h:#56f0cf; --accent-dim:rgba(62,224,192,.12);
+    --text:#eef3f1; --muted:#9aa6a2; --amber:#ffd15c; --amber-dim:rgba(255,209,92,.09);
+    --font:'Nunito',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,'SF Mono',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{color-scheme:dark}
+  body{
+    margin:0;background:var(--bg);color:var(--text);font-family:var(--font);
+    background-image:radial-gradient(1200px 640px at 50% -260px,#12211d,transparent);
+    -webkit-font-smoothing:antialiased;line-height:1.6;
+  }
+  .page{max-width:780px;margin:0 auto;padding:56px 24px 72px}
+
+  /* ── Hero ── */
+  .hero{text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;margin-bottom:14px}
+  .logo-tile{
+    width:88px;height:88px;border-radius:24px;background:#101614;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;animation:glow 3.4s ease-in-out infinite;
+  }
+  .logo-tile svg{width:52px;height:52px}
+  @keyframes glow{
+    0%,100%{filter:drop-shadow(0 0 4px rgba(62,224,192,.45)) drop-shadow(0 0 9px rgba(62,224,192,.25))}
+    50%{filter:drop-shadow(0 0 8px rgba(86,240,207,.9)) drop-shadow(0 0 22px rgba(62,224,192,.55))}
+  }
+  h1{font-size:clamp(34px,7vw,46px);font-weight:800;margin:0;letter-spacing:-.02em;text-wrap:balance}
+  h1 .foxy{color:var(--accent)} h1 .box{color:#fff}
+  .lede{color:var(--muted);font-size:17px;max-width:520px;margin:0;text-wrap:balance}
+  .meta{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+  .chip{
+    font-size:13px;font-weight:700;color:var(--accent);background:var(--accent-dim);
+    border:1px solid rgba(62,224,192,.24);border-radius:980px;padding:6px 13px;
+  }
+  .chip.plain{color:var(--muted);background:transparent;border-color:var(--line-strong)}
+
+  /* ── Callout ── */
+  .callout{
+    background:var(--amber-dim);border:1px solid rgba(255,209,92,.30);border-radius:16px;
+    padding:17px 19px;margin:34px 0;color:#f2d99a;font-size:15px;
+  }
+  .callout b{color:#ffe4a3}
+  .callout ul{margin:9px 0 0;padding-left:20px} .callout li{margin:4px 0}
+
+  /* ── Steps ── */
+  .section-eyebrow{
+    text-transform:uppercase;letter-spacing:.14em;font-size:12.5px;font-weight:800;
+    color:var(--muted);margin:48px 0 18px;
+  }
+  .steps{display:flex;flex-direction:column;gap:16px;counter-reset:step}
+  .step{
+    position:relative;background:var(--surface);border:1px solid var(--line);border-radius:20px;
+    padding:22px 24px 22px 70px;
+  }
+  .step::before{
+    counter-increment:step;content:counter(step);
+    position:absolute;left:20px;top:22px;width:34px;height:34px;border-radius:11px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--accent);color:#062019;font-weight:800;font-size:17px;
+    box-shadow:0 3px 14px rgba(62,224,192,.30);
+  }
+  /* блок без номера (не частина нумерованої послідовності) */
+  .step.no-num::before{content:none}
+  .step.no-num{padding-left:24px}
+  .step h2{margin:2px 0 8px;font-size:19px;font-weight:800;letter-spacing:-.01em}
+  .step p{margin:8px 0;color:#dfe7e4}
+  .step p.sub{color:var(--muted);font-size:14.5px}
+  .step ol,.step ul{margin:8px 0;padding-left:20px} .step li{margin:5px 0}
+  a{color:var(--accent);text-decoration:none;font-weight:700} a:hover{text-decoration:underline}
+
+  code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);
+       border:1px solid var(--line);border-radius:6px;padding:2px 6px;color:#cdefe7}
+  pre{
+    background:var(--surface-2);border:1px solid var(--line);border-radius:12px;
+    padding:13px 15px;overflow-x:auto;margin:12px 0;
+  }
+  pre code{background:none;border:none;padding:0;color:#cdefe7;font-size:13.5px;line-height:1.7}
+
+  .tablewrap{overflow-x:auto;margin:14px 0}
+  table{width:100%;border-collapse:collapse;font-size:14.5px;min-width:420px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:700;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em}
+  tr:last-child td{border-bottom:none}
+  td:first-child{color:var(--accent);font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+
+  .note{
+    background:var(--accent-dim);border:1px solid rgba(62,224,192,.22);border-left:3px solid var(--accent);
+    border-radius:10px;padding:11px 14px;margin:12px 0;font-size:14px;color:#c9e9e2;
+  }
+  .note b{color:var(--accent)}
+
+  /* ── Troubleshooting ── */
+  details{
+    background:var(--surface);border:1px solid var(--line);border-radius:14px;
+    padding:0 18px;margin-bottom:10px;overflow:hidden;
+  }
+  summary{
+    cursor:pointer;padding:15px 0;font-weight:700;font-size:15.5px;list-style:none;
+    display:flex;align-items:center;gap:11px;
+  }
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:'?';flex:0 0 24px;width:24px;height:24px;border-radius:7px;
+    background:var(--amber-dim);color:var(--amber);border:1px solid rgba(255,209,92,.3);
+    display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800}
+  details[open] summary{border-bottom:1px solid var(--line)}
+  details .body{padding:14px 0 18px;color:#dfe7e4;font-size:14.5px}
+  details .body p{margin:0 0 8px}
+
+  footer{margin-top:56px;padding-top:26px;border-top:1px solid var(--line);
+         text-align:center;color:var(--muted);font-size:14px}
+  footer .fox{font-size:22px}
+
+  @media (prefers-reduced-motion:reduce){
+    .logo-tile{animation:none;filter:drop-shadow(0 0 10px rgba(62,224,192,.5))}
+  }
+  @media(max-width:520px){
+    .step{padding:20px 18px 20px 18px}
+    .step::before{position:static;margin-bottom:12px}
+  }
+
+  /* ── Перемикач системи (чистий CSS — працює навіть там, де нема JS, як-от
+        перегляд файлу на iPhone) ── */
+  .os-radio{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden}
+  .seg{display:inline-flex;background:var(--surface);border:1px solid var(--line-strong);
+       border-radius:980px;padding:4px;gap:4px}
+  .seg label{color:var(--muted);font-weight:800;font-size:14.5px;padding:9px 22px;
+       border-radius:980px;cursor:pointer;user-select:none;-webkit-user-select:none;
+       transition:background .15s,color .15s}
+  #os-mac:checked ~ .page .seg label[for="os-mac"],
+  #os-win:checked ~ .page .seg label[for="os-win"]{
+       background:var(--accent);color:#062019;box-shadow:0 3px 12px rgba(62,224,192,.28)}
+  #os-mac:focus-visible ~ .page .seg label[for="os-mac"],
+  #os-win:focus-visible ~ .page .seg label[for="os-win"]{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* показ/приховування залежно від обраної системи (типово — macOS) */
+  .win-only{display:none}
+  #os-win:checked ~ .page .win-only{display:revert}
+  #os-win:checked ~ .page .mac-only{display:none}
+</style>
+</head>
+<body>
+<input class="os-radio" type="radio" name="os" id="os-mac" checked>
+<input class="os-radio" type="radio" name="os" id="os-win">
+<div class="page">
+
+  <header class="hero">
+    <div class="logo-tile" aria-hidden="true">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"
+           stroke="#3ee0c0" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M28 8 L11 52 L50 93 L89 52 L72 8 L58 38 L50 48 L42 38 Z"/>
+        <path d="M36 51 L50 74 L64 51"/>
+        <path d="M20 52 L34 57"/><path d="M26 62 L36 64"/>
+        <path d="M80 52 L66 57"/><path d="M74 62 L64 64"/>
+        <path d="M45 82 L55 82 L50 88 Z" fill="#3ee0c0"/>
+      </svg>
+    </div>
+    <h1><span class="foxy">Foxy</span><span class="box">Box</span></h1>
+    <p class="lede">Тепла розсилка перших повідомлень кандидатам у Telegram з вашого акаунта. Ось як встановити з нуля.</p>
+    <div class="seg" role="radiogroup" aria-label="Оберіть вашу систему">
+      <label for="os-mac">macOS</label>
+      <label for="os-win">Windows</label>
+    </div>
+    <div class="meta">
+      <span class="chip plain">≈ 15 хвилин</span>
+      <span class="chip plain">Без технічних знань</span>
+    </div>
+  </header>
+
+  <div class="callout">
+    <b>Спершу про безпеку.</b> Холодна розсилка порушує правила Telegram і може обмежити акаунт. Тому:
+    <ul>
+      <li>для перших тестів беріть <b>запасний акаунт</b>, не основний робочий;</li>
+      <li>тримайте <b>~20–30 повідомлень на день</b>, паузи не скорочуйте;</li>
+      <li>великі списки розбивайте на кілька днів;</li>
+      <li>якщо вискочив <b>PeerFlood</b> — пауза 1–2 дні, далі не слати.</li>
+    </ul>
+  </div>
+
+  <div class="note" style="margin:26px 0 0">
+    <b>Спокійно, це простіше, ніж здається.</b> Вам не треба нічого програмувати, не треба знати команди напам'ять і не треба вставляти жодних «промтів» чи коду з інтернету. Ви лише копіюєте готові рядки звідси й тиснете Enter. Просто йдіть крок за кроком.
+  </div>
+
+  <div class="section-eyebrow">Встановлення · 6 кроків</div>
+
+  <div class="steps">
+
+    <section class="step">
+      <h2>Розпакувати файли на Робочий стіл</h2>
+      <p>Ви отримали всі файли одним архівом — <code>FoxyBox-встановлення.zip</code> (наприклад, у Завантаженнях або в Telegram).</p>
+      <ol>
+        <li>Двічі клацніть по <code>FoxyBox-встановлення.zip</code> — він розпакується, і поряд зʼявиться <b>папка FoxyBox</b>.</li>
+        <li class="mac-only">Перетягніть цю папку <b>FoxyBox</b> на <b>Робочий стіл</b> (Desktop) — щоб її було легко знайти.</li>
+        <li class="win-only">Перетягніть цю папку <b>FoxyBox</b> на <b>Робочий стіл</b> — щоб її було легко знайти.</li>
+      </ol>
+      <p class="sub">Усередині папки буде кілька файлів. Ось що є що (нічого звідти не виймайте):</p>
+      <ul>
+        <li><code>foxybox.py</code> <span style="color:var(--muted)">— сам застосунок (сюди впишете ключі на кроці 5)</span></li>
+        <li><code>index.html</code> <span style="color:var(--muted)">— вигляд застосунку, чіпати не треба</span></li>
+        <li class="mac-only"><code>FoxyBox.command</code> <span style="color:var(--muted)">— кнопка запуску (Mac)</span></li>
+        <li class="win-only"><code>FoxyBox.bat</code> <span style="color:var(--muted)">— кнопка запуску (Windows)</span></li>
+        <li><code>Інструкція.html</code> <span style="color:var(--muted)">— ця сама інструкція</span></li>
+      </ul>
+      <div class="note"><b>Головне правило:</b> усі файли мають лишатися <b>разом в одній папці</b>. Не перекладайте їх поодинці — FoxyBox шукає їх поруч.</div>
+    </section>
+
+    <section class="step">
+      <h2>Встановити Python</h2>
+      <p>Python — «двигун», на якому працює FoxyBox. Можливо, він уже є.</p>
+
+      <div class="note mac-only"><b>Що таке Термінал?</b> Це вбудована програма Mac, де замість кнопок ви вводите короткі команди текстом. Лякатись не варто: ви лише вставлятимете готові рядки звідси, а комп'ютер усе зробить сам.</div>
+      <div class="note win-only"><b>Що таке Командний рядок?</b> Це вбудована програма Windows, де замість кнопок ви вводите короткі команди текстом. Лякатись не варто: ви лише вставлятимете готові рядки звідси, а комп'ютер усе зробить сам.</div>
+
+      <p class="sub mac-only"><b>Як відкрити Термінал:</b> натисніть <code>Cmd + Пробіл</code> (з'явиться рядок пошуку Spotlight), наберіть слово <b>Термінал</b> і натисніть Enter. Відкриється невелике вікно — саме туди вставляйте команди.</p>
+      <p class="sub win-only"><b>Як відкрити Командний рядок:</b> натисніть клавішу <b>Windows</b> (або значок «Пуск» унизу зліва), наберіть <code>cmd</code> і натисніть Enter. Відкриється чорне вікно — саме туди вставляйте команди.</p>
+
+      <p class="sub mac-only"><b>Тепер акуратно:</b> клацніть мишкою всередину вікна Терміналу (щоб воно стало активним). Скопіюйте команду нижче (виділіть її мишкою і натисніть <code>Cmd + C</code>), поверніться у вікно, вставте (<code>Cmd + V</code>) і натисніть <b>Enter</b>:</p>
+      <p class="sub win-only"><b>Тепер акуратно:</b> клацніть мишкою всередину чорного вікна. Скопіюйте команду нижче (виділіть її мишкою і натисніть <code>Ctrl + C</code>), поверніться у вікно, вставте (клацніть <b>правою</b> кнопкою миші або <code>Ctrl + V</code>) і натисніть <b>Enter</b>:</p>
+      <pre class="mac-only"><code>python3 --version</code></pre>
+      <pre class="win-only"><code>python --version</code></pre>
+      <p class="sub mac-only">Якщо бачите <code>Python 3.9</code> або вище — переходьте далі. Якщо помилка — завантажте Python з <a href="https://www.python.org/downloads/">python.org/downloads</a>, відкрийте файл <code>.pkg</code> і встановіть (Continue → Agree → Install).</p>
+      <p class="sub win-only">Якщо бачите <code>Python 3.9</code> або вище — переходьте далі. Якщо помилка — завантажте Python з <a href="https://www.python.org/downloads/">python.org/downloads</a>. <b>Обов'язково</b> на першому екрані інсталятора поставте галочку <b>«Add Python to PATH»</b>, потім Install.</p>
+    </section>
+
+    <section class="step">
+      <h2>Встановити Telethon</h2>
+      <p>Telethon — це «перекладач», через який FoxyBox спілкується з Telegram.</p>
+      <p class="sub">У <b>тому самому вікні</b>, що й у кроці 1 (Термінал / Командний рядок), вставте команду нижче — так само: скопіюйте <span class="mac-only">(<code>Cmd + C</code>)</span><span class="win-only">(<code>Ctrl + C</code>)</span>, клацніть у вікно, вставте <span class="mac-only">(<code>Cmd + V</code>)</span><span class="win-only">(права кнопка миші або <code>Ctrl + V</code>)</span> і натисніть <b>Enter</b>:</p>
+      <pre class="mac-only"><code>pip3 install telethon</code></pre>
+      <pre class="win-only"><code>pip install telethon
+pip install tzdata</code></pre>
+      <p class="sub">Зачекайте кілька секунд — побіжить текст. Коли внизу зʼявиться <code>Successfully installed telethon-…</code> — готово, крок виконано.</p>
+      <div class="note win-only"><b>Навіщо tzdata:</b> у Windows нема системної бази часових поясів, а вона потрібна для скидання денного ліміту о 00:00 CET. Якщо забудете — FoxyBox сам нагадає про цю команду при запуску.</div>
+    </section>
+
+    <section class="step">
+      <h2>Отримати два ключі від Telegram</h2>
+      <p>Щоб застосунок міг заходити у ваш Telegram, потрібні <code>api_id</code> і <code>api_hash</code>. Їх безкоштовно видає сам Telegram.</p>
+      <ol>
+        <li>Відкрийте <a href="https://my.telegram.org">my.telegram.org</a>, увійдіть за номером телефону (краще запасного) і кодом із Telegram.</li>
+        <li>Натисніть <b>API development tools</b>.</li>
+        <li>Заповніть <b>тільки два поля</b>: <b>App title</b> = <code>FoxyBox</code>, <b>Short name</b> = <code>foxybox</code>. Поля <b>URL</b> і <b>Description</b> лишіть порожніми, Platform — <code>Desktop</code>.</li>
+        <li>Натисніть <b>Create application</b>.</li>
+        <li>Скопіюйте два значення: <b>api_id</b> (коротке число) і <b>api_hash</b> (довгий рядок).</li>
+      </ol>
+      <div class="note"><b>Приватне:</b> ці ключі нікому не пересилайте й нікуди не викладайте.</div>
+    </section>
+
+    <section class="step">
+      <h2>Вписати ключі у програму</h2>
+      <p class="sub mac-only"><b>Як відкрити файл:</b> у папці FoxyBox клацніть по <code>foxybox.py</code> <b>правою</b> кнопкою миші → <b>Відкрити у програмі</b> → <b>TextEdit</b>.</p>
+      <p class="sub win-only"><b>Як відкрити файл:</b> у папці FoxyBox клацніть по <code>foxybox.py</code> <b>правою</b> кнопкою миші → <b>Відкрити за допомогою</b> → <b>Блокнот</b> (Notepad).</p>
+      <p>Угорі файлу знайдіть два рядки, що починаються з <code>API_ID</code> і <code>API_HASH</code>. Замініть у них значення на свої з кроку 4 — число без лапок, а хеш обовʼязково <b>в лапках</b>:</p>
+      <pre><code>API_ID = 1234567
+API_HASH = "ВАШ_ХЕШ_СЮДИ_У_ЛАПКАХ"</code></pre>
+      <p class="sub"><code>1234567</code> і текст у лапках — це лише <b>приклад формату</b>. Зітріть його і впишіть свої два значення. Потім збережіть файл: <span class="mac-only"><code>Cmd + S</code></span><span class="win-only"><code>Ctrl + S</code></span>, і закрийте редактор.</p>
+    </section>
+
+    <section class="step">
+      <h2>Перший запуск і вхід</h2>
+      <p>Двічі клацніть <b><span class="mac-only">FoxyBox.command</span><span class="win-only">FoxyBox.bat</span></b>. Відкриється чорне вікно — відповідайте на запитання:</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Термінал запитає</th><th>Що ввести</th></tr></thead>
+          <tbody>
+            <tr><td>Номер телефону</td><td>ваш номер у форматі <code>+380…</code>, Enter</td></tr>
+            <tr><td>Код із Telegram</td><td>код, що прийде <b>у самому Telegram</b> (не SMS), Enter</td></tr>
+            <tr><td>Хмарний пароль</td><td>якщо у вас увімкнена двоетапна перевірка — введіть цей пароль; якщо ні — просто Enter</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><b>Готово!</b> Після «Ви увійшли» браузер відкриється сам. Вхід більше не питатиме — далі просто двічі клацаєте ярлик. 🎉</div>
+    </section>
+
+  </div>
+
+  <div class="section-eyebrow">Як користуватись</div>
+  <section class="step no-num">
+    <p><b>1. Запуск.</b> Двічі клацніть <code class="mac-only">FoxyBox.command</code><code class="win-only">FoxyBox.bat</code> — за кілька секунд відкриється браузер із застосунком.</p>
+    <p><b>2. Розсилка.</b> У вікні застосунку два поля. У перше впишіть <b>текст повідомлення</b> (опис вакансії своїми словами). У друге — <b>список @username</b> кандидатів, по одному в рядку. Натисніть <b>«Запустити розсилку»</b>. Паузи, базу й денний ліміт FoxyBox веде сам.</p>
+    <p><b>3. Зупинити.</b> Закрийте вікно Терміналу або натисніть у ньому <code>Ctrl + C</code>.</p>
+    <div class="note"><b>Нічого «програмувати» чи вставляти жодних «промтів» не треба.</b> Єдине, що ви вписуєте у застосунок, — свій текст вакансії та список @username. Це все.</div>
+    <div class="note"><b>Порада на перший раз:</b> впишіть у список свій власний <code>@username</code> і надішліть повідомлення собі — воно прийде у «Збережені повідомлення» (Saved Messages). Так ви безпечно переконаєтесь, що все працює, нікого не потурбувавши.</div>
+  </section>
+
+  <div class="section-eyebrow">Якщо щось пішло не так</div>
+
+  <details>
+    <summary>Браузер не відкрився / Термінал закрився з помилкою</summary>
+    <div class="body"><p>Найчастіше це збій входу. Відкрийте файл <code>foxybox.log</code> у папці — в останніх рядках буде причина (найпоширеніші — нижче).</p></div>
+  </details>
+  <details>
+    <summary>Пише про невірний пароль (PasswordHashInvalidError)</summary>
+    <div class="body"><p>На акаунті увімкнена двоетапна перевірка, а на кроці пароля ви натиснули Enter. Запустіть ще раз і введіть свій <b>хмарний пароль Telegram</b> (Налаштування → Конфіденційність → Двоетапна перевірка). Це не код і не пароль від пошти.</p></div>
+  </details>
+  <details>
+    <summary>Код не приймається або просить почати спочатку</summary>
+    <div class="body"><p>Старий код стає недійсним. Запустіть ярлик заново і введіть <b>новий</b> код із Telegram.</p></div>
+  </details>
+  <details class="mac-only">
+    <summary>macOS не відкриває файл «від невідомого розробника»</summary>
+    <div class="body"><p>Клацніть по <code>FoxyBox.command</code> <b>правою кнопкою → Відкрити → Відкрити</b>. Достатньо один раз.</p></div>
+  </details>
+  <details class="win-only">
+    <summary>Windows показує «Захист системи SmartScreen»</summary>
+    <div class="body"><p>Натисніть <b>«Докладніше» → «Виконати в будь-якому разі»</b>. Це стандартне попередження для файлів, завантажених з інтернету.</p></div>
+  </details>
+  <details>
+    <summary>Пише «FoxyBox вже працює»</summary>
+    <div class="body"><p>Движок уже запущено — просто відкрийте в браузері <code>http://127.0.0.1:8770</code></p></div>
+  </details>
+  <details class="mac-only">
+    <summary>Подвійний клік нічого не робить</summary>
+    <div class="body"><p>Відкрийте Термінал, наберіть <code>cd </code> (з пробілом), перетягніть у вікно папку FoxyBox, Enter. Далі вставте <code>python3 foxybox.py</code></p></div>
+  </details>
+  <details class="win-only">
+    <summary>Подвійний клік нічого не робить</summary>
+    <div class="body"><p>Відкрийте Командний рядок (<code>cmd</code>), наберіть <code>cd </code> (з пробілом), перетягніть у вікно папку FoxyBox, Enter. Далі вставте <code>python foxybox.py</code></p></div>
+  </details>
+
+  <footer>
+    <div class="fox">🦊</div>
+    <p>FoxyBox працює локально на вашому комп'ютері. Приватні файли — <code>foxybox.py</code> (там ваші ключі) і <code>foxybox_session.session</code> — нікому не пересилайте.</p>
+  </footer>
+
+</div>
+</body>
+</html>

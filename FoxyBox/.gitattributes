@@ -1,0 +1,2 @@
+# FoxyBox.bat має лишатися з CRLF, інакше Windows його не виконує
+*.bat text eol=crlf

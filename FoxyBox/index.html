@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FoxyBox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0d0c; --card:#14181a; --line:rgba(255,255,255,.07);
+    --accent:#3ee0c0; --accent-h:#56f0cf; --text:#eef3f1; --muted:#9aa6a2;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; color:var(--text);
+    font-family:'Nunito',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:var(--bg);
+    background-image:radial-gradient(1100px 560px at 50% -220px,#12211d,transparent);
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:680px;margin:0 auto;padding:38px 22px 60px}
+
+  /* ── Шапка ── */
+  header{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;margin-bottom:24px}
+  .logo-tile{
+    width:78px;height:78px;border-radius:22px;
+    background:#101614;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    animation:glow 3.2s ease-in-out infinite;
+  }
+  .logo-tile svg{width:46px;height:46px;display:block}
+  @keyframes glow{
+    0%,100%{filter:drop-shadow(0 0 3px rgba(62,224,192,.45)) drop-shadow(0 0 8px rgba(62,224,192,.25))}
+    50%{filter:drop-shadow(0 0 7px rgba(86,240,207,.9)) drop-shadow(0 0 20px rgba(62,224,192,.55))}
+  }
+  h1{font-size:34px;font-weight:800;margin:0;letter-spacing:-.01em}
+  h1 .foxy{color:var(--accent)} h1 .box{color:#fff}
+  .subtitle{color:var(--muted);font-size:15.5px;margin:0;max-width:440px;line-height:1.5}
+
+  /* ── Панель акаунтів ── */
+  .accbar{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    justify-content:center;margin-bottom:16px;
+  }
+  .accpill{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--card);border:1px solid var(--line);
+    border-radius:980px;padding:7px 8px 7px 14px;
+    font-weight:700;font-size:13.5px;color:var(--muted);
+    cursor:pointer;transition:border-color .15s,color .15s;
+  }
+  .accpill:hover{color:var(--text);border-color:rgba(62,224,192,.4)}
+  .accpill.on{color:var(--accent);border-color:rgba(62,224,192,.55);background:rgba(62,224,192,.10)}
+  .accpill .dot{width:7px;height:7px;border-radius:50%;background:#3c4644;flex:0 0 7px}
+  .accpill.on .dot{background:var(--accent)}
+  .accpill .x{
+    border:none;background:transparent;color:var(--muted);cursor:pointer;
+    font-size:15px;line-height:1;padding:3px 5px;border-radius:50%;font-family:inherit;
+  }
+  .accpill .x:hover{color:#ff9b9b;background:rgba(255,107,107,.12)}
+  .accadd{
+    border:1px dashed rgba(255,255,255,.18);background:transparent;color:var(--muted);
+    font-family:inherit;font-weight:700;font-size:13.5px;cursor:pointer;
+    padding:8px 15px;border-radius:980px;transition:color .15s,border-color .15s;
+  }
+  .accadd:hover{color:var(--accent);border-color:rgba(62,224,192,.5)}
+  .accform input{
+    width:100%;background:#0f1413;color:var(--text);
+    border:1px solid var(--line);border-radius:14px;
+    padding:13px 14px;font:inherit;font-size:15px;outline:none;margin-bottom:12px;
+  }
+  .accform input:focus{border-color:rgba(62,224,192,.55)}
+  .accrow{display:flex;gap:9px}
+  .accrow .mini-btn{flex:0 0 auto}
+  .accrow .go{
+    background:var(--accent);color:#062019;border:none;font-weight:800;
+    padding:11px 20px;border-radius:980px;cursor:pointer;font-family:inherit;font-size:14.5px;
+  }
+  .accrow .go:disabled{opacity:.55;cursor:not-allowed}
+  .accmsg{margin-top:12px;font-size:14px;line-height:1.5;color:var(--muted)}
+  .accmsg.err{color:#ffb3b3}
+  .accmsg.ok{color:var(--accent)}
+
+  /* ── Вкладки ── */
+  .tabs{
+    display:grid;grid-template-columns:1fr 1fr;gap:6px;
+    background:var(--card);border:1px solid var(--line);
+    border-radius:16px;padding:6px;margin-bottom:18px;
+  }
+  .tab{
+    border:none;cursor:pointer;background:transparent;color:var(--muted);
+    font-family:inherit;font-weight:700;font-size:15px;
+    padding:12px 8px;border-radius:11px;transition:background .15s,color .15s;
+  }
+  .tab:hover{color:var(--text)}
+  .tab.active{background:rgba(62,224,192,.12);color:var(--accent)}
+
+  /* ── Картки ── */
+  .card{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:20px;padding:20px 20px;margin-bottom:16px;
+  }
+  label.field-title{display:block;font-weight:700;font-size:15px;margin-bottom:4px}
+  .hint{color:var(--muted);font-size:13.5px;margin:0 0 12px;line-height:1.45}
+  textarea{
+    width:100%;background:#0f1413;color:var(--text);
+    border:1px solid var(--line);border-radius:14px;
+    padding:13px 14px;font:inherit;font-size:15px;resize:vertical;
+    line-height:1.5;outline:none;transition:border-color .15s;
+  }
+  textarea:focus{border-color:rgba(62,224,192,.55)}
+  #pitch{min-height:120px} #usernames{min-height:110px} #groupPitch{min-height:120px}
+
+  .vac-tag{
+    display:none;margin-top:12px;padding:9px 13px;border-radius:12px;
+    background:rgba(62,224,192,.10);border:1px solid rgba(62,224,192,.28);
+    color:var(--accent);font-weight:700;font-size:14px;
+  }
+  .vac-tag.show{display:inline-block}
+  .vac-tag span{color:var(--text);font-weight:600}
+
+  /* ── Прев'ю Telegram ── */
+  .preview-title{font-weight:700;font-size:15px;margin:2px 0 12px}
+  .tg-msg{display:flex;gap:11px;align-items:flex-start;margin-bottom:12px}
+  .tg-msg:last-child{margin-bottom:0}
+  .avatar{
+    width:40px;height:40px;border-radius:50%;flex:0 0 40px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:17px;color:#08110e;
+    background:linear-gradient(135deg,#3ee0c0,#2ab79b);
+  }
+  .bubble-wrap{min-width:0}
+  .bubble-name{color:var(--accent);font-weight:700;font-size:13.5px;margin-bottom:3px}
+  .bubble{
+    background:#20272a;border-radius:4px 16px 16px 16px;
+    padding:10px 13px;font-size:14.5px;line-height:1.45;
+    white-space:pre-wrap;word-break:break-word;color:#e9efee;
+  }
+  .preview-empty{color:var(--muted);font-size:14px}
+
+  /* ── Список груп ── */
+  .glist-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .mini-btn{
+    border:1px solid var(--line);background:#0f1413;color:var(--text);
+    font-family:inherit;font-weight:700;font-size:13.5px;cursor:pointer;
+    padding:8px 14px;border-radius:980px;transition:border-color .15s,color .15s;
+  }
+  .mini-btn:hover{border-color:rgba(62,224,192,.5);color:var(--accent)}
+  .mini-btn:disabled{opacity:.5;cursor:not-allowed}
+  .glist{max-height:330px;overflow-y:auto;margin:0 -6px;padding:0 6px}
+  .grow{
+    display:flex;align-items:flex-start;gap:11px;
+    padding:11px 12px;border-radius:13px;cursor:pointer;
+    border:1px solid transparent;transition:background .12s;
+  }
+  .grow:hover{background:#0f1413}
+  .grow.off{opacity:.45;cursor:not-allowed}
+  .grow input{
+    width:19px;height:19px;flex:0 0 19px;margin-top:2px;
+    accent-color:var(--accent);cursor:pointer;
+  }
+  .grow.off input{cursor:not-allowed}
+  .gname{font-weight:700;font-size:14.5px;line-height:1.35;word-break:break-word}
+  .gmeta{color:var(--muted);font-size:12.5px;margin-top:2px}
+  .gmeta .tagch{color:var(--accent)}
+  .gempty{color:var(--muted);font-size:14px;padding:14px 4px;line-height:1.5}
+  .gsel{color:var(--muted);font-size:13.5px;margin-top:12px}
+  .gsel b{color:var(--accent)}
+
+  /* ── Показники ── */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0 16px}
+  .stat{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:14px 10px;text-align:center;
+  }
+  .stat .num{font-size:26px;font-weight:800;line-height:1}
+  .stat .num.accent{color:var(--accent)}
+  .stat .cap{color:var(--muted);font-size:12px;margin-top:6px;line-height:1.3}
+  @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
+
+  /* ── Кнопка ── */
+  .run-btn{
+    width:100%;border:none;cursor:pointer;
+    background:var(--accent);color:#062019;
+    font-family:inherit;font-weight:800;font-size:18px;
+    padding:17px;border-radius:980px;
+    box-shadow:0 6px 26px rgba(62,224,192,.32);
+    transition:background .15s,transform .06s,box-shadow .15s;
+  }
+  .run-btn:hover{background:var(--accent-h);box-shadow:0 8px 32px rgba(62,224,192,.45)}
+  .run-btn:active{transform:translateY(1px)}
+  .run-btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+
+  /* ── Прогрес / результат ── */
+  .progress{display:none;margin-top:16px}
+  .progress.show{display:block}
+  .prog-line{font-weight:700;font-size:16px;margin-bottom:12px}
+  .bar{height:9px;background:#0f1413;border-radius:980px;overflow:hidden;border:1px solid var(--line)}
+  .bar>i{display:block;height:100%;width:0;background:var(--accent);border-radius:980px;transition:width .4s}
+  .log{margin-top:14px;font-size:14px;line-height:1.7}
+  .log .ok{color:var(--accent)}
+  .log .skip{color:var(--muted)}
+  .log .stop{color:#ffd15c}
+  .banner{
+    margin-top:14px;padding:13px 15px;border-radius:14px;font-size:14.5px;line-height:1.5;
+    background:rgba(255,209,92,.10);border:1px solid rgba(255,209,92,.35);color:#ffe09a;
+  }
+  .banner.err{background:rgba(255,107,107,.10);border-color:rgba(255,107,107,.4);color:#ffb3b3}
+
+  /* ── Попередження ── */
+  .warn{
+    margin-top:22px;padding:15px 17px;border-radius:16px;font-size:14px;line-height:1.55;
+    background:rgba(255,209,92,.08);border:1px solid rgba(255,209,92,.30);color:#f2d99a;
+  }
+  .warn b{color:#ffe4a3}
+  .foot{text-align:center;margin-top:26px}
+  .foot a{color:var(--accent);text-decoration:none;font-weight:700}
+  .foot a:hover{text-decoration:underline}
+  .status-dot{font-size:13px;color:var(--muted);text-align:center;margin-top:10px}
+  .status-dot b{color:var(--accent)}
+
+  @media (prefers-reduced-motion:reduce){
+    .logo-tile{animation:none;filter:drop-shadow(0 0 8px rgba(62,224,192,.5))}
+    .bar>i{transition:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo-tile" aria-hidden="true">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"
+           stroke="#3ee0c0" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M28 8 L11 52 L50 93 L89 52 L72 8 L58 38 L50 48 L42 38 Z"/>
+        <path d="M36 51 L50 74 L64 51"/>
+        <path d="M20 52 L34 57"/>
+        <path d="M26 62 L36 64"/>
+        <path d="M80 52 L66 57"/>
+        <path d="M74 62 L64 64"/>
+        <path d="M45 82 L55 82 L50 88 Z" fill="#3ee0c0"/>
+      </svg>
+    </div>
+    <h1><span class="foxy">Foxy</span><span class="box">Box</span></h1>
+    <p class="subtitle" id="subtitle">Тепла розсилка перших повідомлень кандидатам у Telegram. Вставте піч і список — решту зробить FoxyBox.</p>
+  </header>
+
+  <!-- Акаунти -->
+  <div class="accbar">
+    <div class="acclist" id="accList" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"></div>
+    <button class="accadd" id="addAccBtn">+ Додати акаунт</button>
+  </div>
+
+  <!-- Форма додавання акаунта -->
+  <div class="card accform" id="addAccCard" style="display:none">
+    <label class="field-title">Новий акаунт Telegram</label>
+    <p class="hint" id="accStepHint">Введіть номер телефону — Telegram надішле код у застосунок.</p>
+
+    <div id="accStepPhone">
+      <input id="accPhone" type="tel" placeholder="+380671234567" autocomplete="off">
+      <div class="accrow">
+        <button class="go" id="accSendCode">Надіслати код</button>
+        <button class="mini-btn" id="accCancel">Скасувати</button>
+      </div>
+    </div>
+
+    <div id="accStepCode" style="display:none">
+      <input id="accCode" type="text" inputmode="numeric" placeholder="Код із Telegram" autocomplete="off">
+      <div class="accrow">
+        <button class="go" id="accSendCodeOk">Підтвердити</button>
+        <button class="mini-btn" id="accCancel2">Скасувати</button>
+      </div>
+    </div>
+
+    <div id="accStepPwd" style="display:none">
+      <input id="accPwd" type="password" placeholder="Хмарний пароль (двоетапна перевірка)" autocomplete="off">
+      <div class="accrow">
+        <button class="go" id="accSendPwd">Увійти</button>
+        <button class="mini-btn" id="accCancel3">Скасувати</button>
+      </div>
+    </div>
+
+    <div class="accmsg" id="accMsg"></div>
+  </div>
+
+  <!-- Вкладки -->
+  <div class="tabs">
+    <button class="tab active" id="tabBtnDm">Особисті повідомлення</button>
+    <button class="tab" id="tabBtnGr">Пости в групи</button>
+  </div>
+
+  <!-- ══════════ ВКЛАДКА 1: особисті повідомлення ══════════ -->
+  <div id="paneDm">
+
+    <div class="card">
+      <label class="field-title" for="pitch">Текст повідомлення</label>
+      <p class="hint">Опишіть вакансію своїми словами, так, як написали б кандидату. Це повідомлення отримає кожен зі списку.</p>
+      <textarea id="pitch" placeholder="Привіт! Ми шукаємо Python розробника в дружню продуктову команду. Повна віддаленка, гнучкий графік. Буде цікаво розповісти деталі, якщо відгукнеться :)"></textarea>
+      <div class="vac-tag" id="vacTag"></div>
+    </div>
+
+    <div class="card">
+      <label class="field-title" for="usernames">Кому надіслати</label>
+      <p class="hint">По одному юзернейму в рядку. Можна з @ або без. Писати можна тільки тим, у кого є @username.</p>
+      <textarea id="usernames" placeholder="@kateryna_dev&#10;@ivan.backend&#10;@maria_qa"></textarea>
+    </div>
+
+    <div class="card" id="previewCard" style="display:none">
+      <div class="preview-title">Як це побачить кандидат</div>
+      <div id="previewList"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="num" id="stTotalContacts">0</div><div class="cap">Всього контактів у базі</div></div>
+      <div class="stat"><div class="num" id="stTotalSent">0</div><div class="cap">Всього надіслано</div></div>
+      <div class="stat"><div class="num" id="stToday">0</div><div class="cap">Надіслано сьогодні</div></div>
+      <div class="stat"><div class="num accent" id="stLeft">30</div><div class="cap">Лишилось до ліміту сьогодні</div></div>
+    </div>
+
+    <button class="run-btn" id="runBtn">Запустити розсилку</button>
+
+    <div class="progress" id="progress">
+      <div class="prog-line" id="progLine">Готуюсь…</div>
+      <div class="bar"><i id="progBar"></i></div>
+      <div class="log" id="progLog"></div>
+      <div id="progBanner"></div>
+    </div>
+
+    <div class="warn">
+      <b>Пишіть обачливо.</b> Тримайте темп близько 30 повідомлень на день і не скорочуйте паузи між ними.
+      Великий список краще розбити на кілька днів. Інакше Telegram може сприйняти це за спам і обмежити акаунт.
+    </div>
+
+  </div>
+
+  <!-- ══════════ ВКЛАДКА 2: пости в групи ══════════ -->
+  <div id="paneGr" style="display:none">
+
+    <div class="card">
+      <label class="field-title" for="groupPitch">Текст поста</label>
+      <p class="hint">Оголошення про вакансію так, як його побачать учасники групи. Один і той самий текст піде в усі вибрані групи.</p>
+      <textarea id="groupPitch" placeholder="Шукаємо Python розробника в продуктову команду. Віддалено, гнучкий графік, вилка 3000-4500$. Пишіть у приватні — розкажу деталі :)"></textarea>
+      <div class="vac-tag" id="gVacTag"></div>
+    </div>
+
+    <div class="card">
+      <div class="glist-head">
+        <div>
+          <label class="field-title">Куди публікувати</label>
+          <p class="hint" style="margin-bottom:0">Групи й канали, у яких ви є. Позначте потрібні.</p>
+        </div>
+        <button class="mini-btn" id="reloadGroups">Оновити</button>
+      </div>
+      <div class="glist" id="groupList">
+        <div class="gempty">Завантажую список груп…</div>
+      </div>
+      <div class="gsel" id="groupSel">Вибрано: <b>0</b></div>
+    </div>
+
+    <div class="card" id="gPreviewCard" style="display:none">
+      <div class="preview-title">Як це побачать у групі</div>
+      <div id="gPreviewList"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="num" id="stTotalGroups">0</div><div class="cap">Груп у базі</div></div>
+      <div class="stat"><div class="num" id="stGroupSent">0</div><div class="cap">Всього постів</div></div>
+      <div class="stat"><div class="num" id="stGroupToday">0</div><div class="cap">Опубліковано сьогодні</div></div>
+      <div class="stat"><div class="num accent" id="stGroupLeft">10</div><div class="cap">Лишилось до ліміту сьогодні</div></div>
+    </div>
+
+    <button class="run-btn" id="runGroupBtn">Опублікувати в групах</button>
+
+    <div class="progress" id="gprogress">
+      <div class="prog-line" id="gprogLine">Готуюсь…</div>
+      <div class="bar"><i id="gprogBar"></i></div>
+      <div class="log" id="gprogLog"></div>
+      <div id="gprogBanner"></div>
+    </div>
+
+    <div class="warn">
+      <b>У групах правила суворіші.</b> Ліміт тут 10 постів на день і паузи 45–90 секунд — групи чутливіші до спаму,
+      ніж особисті повідомлення. В одну групу FoxyBox публікує не частіше разу на день.
+      Перед постингом перевірте правила групи: у багатьох чатах вакансії дозволені лише в окремі дні або в спеціальній гілці,
+      і за порушення адміни банять швидше, ніж Telegram.
+    </div>
+
+  </div>
+
+  <div class="status-dot" id="statusDot"></div>
+
+  <div class="foot">
+    <a href="/db" target="_blank">Дані по контактах зберігаються тут</a>
+  </div>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const pitch = $('#pitch'), usernames = $('#usernames'), groupPitch = $('#groupPitch');
+
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+// ── Акаунти ──
+let accounts=[], accBusy=false;
+
+async function loadAccounts(){
+  try{
+    const r=await fetch('/api/accounts'); const d=await r.json();
+    accounts=d.accounts||[];
+    renderAccounts();
+    // жодного акаунта — одразу пропонуємо додати
+    if(!accounts.length) showAddForm(true);
+    return d;
+  }catch(e){ return null; }
+}
+function renderAccounts(){
+  const box=$('#accList');
+  if(!accounts.length){ box.innerHTML=''; return; }
+  box.innerHTML=accounts.map(a=>{
+    const name=escapeHtml(a.username||a.title||a.id);
+    const x = accounts.length>1
+      ? '<button class="x" data-x="'+escapeHtml(a.id)+'" title="Вийти з цього акаунта">&times;</button>' : '';
+    return '<span class="accpill'+(a.active?' on':'')+'" data-id="'+escapeHtml(a.id)+'">'+
+      '<span class="dot"></span>'+name+x+'</span>';
+  }).join('');
+  box.querySelectorAll('.accpill').forEach(p=>{
+    p.addEventListener('click',ev=>{
+      if(ev.target.dataset.x!==undefined) return;
+      const id=p.dataset.id;
+      if(!accounts.find(a=>a.id===id&&a.active)) switchAccount(id);
+    });
+  });
+  box.querySelectorAll('.x').forEach(b=>{
+    b.addEventListener('click',ev=>{ ev.stopPropagation(); removeAccount(b.dataset.x); });
+  });
+}
+async function switchAccount(id){
+  if(accBusy) return; accBusy=true;
+  const box=$('#accList'); box.style.opacity='.5';
+  try{
+    const r=await fetch('/api/accounts/switch',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+    const d=await r.json();
+    if(!r.ok){ alert(d.error||'Не вдалося перемкнути акаунт.'); return; }
+    afterAccountChange();
+  }catch(e){ alert('Не вдалося перемкнути акаунт: '+e.message); }
+  finally{ accBusy=false; box.style.opacity='1'; }
+}
+async function removeAccount(id){
+  const a=accounts.find(x=>x.id===id);
+  if(!confirm('Вийти з акаунта '+((a&&(a.username||a.title))||id)+'?\n\n'+
+              'FoxyBox забуде вхід, і наступного разу доведеться вводити код заново. '+
+              'База контактів цього акаунта збережеться.')) return;
+  if(accBusy) return; accBusy=true;
+  try{
+    const r=await fetch('/api/accounts/remove',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({id})});
+    const d=await r.json();
+    if(!r.ok){ alert(d.error||'Не вдалося вийти з акаунта.'); return; }
+    afterAccountChange();
+  }catch(e){ alert('Не вдалося вийти з акаунта: '+e.message); }
+  finally{ accBusy=false; }
+}
+function afterAccountChange(){
+  // у кожного акаунта свої групи й своя база — скидаємо все підвантажене
+  groupsLoaded=false; groupsData=[];
+  $('#groupList').innerHTML='<div class="gempty">Натисніть «Оновити», щоб підтягнути групи цього акаунта.</div>';
+  updateGroupSel();
+  $('#gPreviewCard').style.display='none';
+  loadAccounts(); loadStats();
+}
+
+// ── Додавання акаунта ──
+function showAddForm(show){
+  $('#addAccCard').style.display = show ? 'block' : 'none';
+  if(show) accStep('phone');
+}
+function accStep(step){
+  $('#accStepPhone').style.display = step==='phone' ? 'block' : 'none';
+  $('#accStepCode').style.display  = step==='code'  ? 'block' : 'none';
+  $('#accStepPwd').style.display   = step==='pwd'   ? 'block' : 'none';
+  $('#accStepHint').textContent =
+    step==='phone' ? 'Введіть номер телефону — Telegram надішле код у застосунок.' :
+    step==='code'  ? 'Код прийшов у сам Telegram (не SMS). Введіть його сюди.' :
+                     'На акаунті увімкнена двоетапна перевірка — введіть хмарний пароль Telegram.';
+  if(step==='phone'){ $('#accCode').value=''; $('#accPwd').value=''; }
+  const f={phone:'#accPhone',code:'#accCode',pwd:'#accPwd'}[step];
+  setTimeout(()=>{ const el=$(f); if(el) el.focus(); },50);
+}
+function accMsg(text,kind){
+  const m=$('#accMsg'); m.className='accmsg'+(kind?' '+kind:''); m.textContent=text||'';
+}
+async function accPost(url,payload,btn){
+  btn.disabled=true; accMsg('Хвилинку…');
+  try{
+    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(!r.ok){ accMsg(d.error||'Не вдалося.','err'); return null; }
+    return d;
+  }catch(e){ accMsg('Помилка звʼязку: '+e.message,'err'); return null; }
+  finally{ btn.disabled=false; }
+}
+$('#addAccBtn').addEventListener('click',()=>{
+  const open = $('#addAccCard').style.display!=='none';
+  showAddForm(!open);
+  if(!open) accMsg('');
+});
+$('#accSendCode').addEventListener('click',async ev=>{
+  const phone=$('#accPhone').value.trim();
+  if(!phone){ accMsg('Введіть номер телефону.','err'); return; }
+  const d=await accPost('/api/accounts/add/start',{phone},ev.target);
+  if(d){ accMsg('Код надіслано у Telegram.','ok'); accStep('code'); }
+});
+$('#accSendCodeOk').addEventListener('click',async ev=>{
+  const code=$('#accCode').value.trim();
+  if(!code){ accMsg('Введіть код.','err'); return; }
+  const d=await accPost('/api/accounts/add/code',{code},ev.target);
+  if(!d) return;
+  if(d.need_password){ accMsg(''); accStep('pwd'); return; }
+  accDone(d);
+});
+$('#accSendPwd').addEventListener('click',async ev=>{
+  const password=$('#accPwd').value;
+  if(!password){ accMsg('Введіть хмарний пароль.','err'); return; }
+  const d=await accPost('/api/accounts/add/password',{password},ev.target);
+  if(d) accDone(d);
+});
+function accDone(d){
+  accMsg('Готово! Акаунт '+(d.added||d.me||'')+' додано і вже активний.','ok');
+  $('#accPhone').value='';
+  setTimeout(()=>{ showAddForm(false); accMsg(''); },1800);
+  afterAccountChange();
+}
+['#accCancel','#accCancel2','#accCancel3'].forEach(sel=>{
+  $(sel).addEventListener('click',async()=>{
+    await fetch('/api/accounts/add/cancel',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>{});
+    showAddForm(false); accMsg('');
+  });
+});
+// Enter у полях форми
+[['#accPhone','#accSendCode'],['#accCode','#accSendCodeOk'],['#accPwd','#accSendPwd']]
+  .forEach(([inp,btn])=>{
+    $(inp).addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); $(btn).click(); } });
+  });
+
+// ── Вкладки ──
+const SUB_DM = 'Тепла розсилка перших повідомлень кандидатам у Telegram. Вставте піч і список — решту зробить FoxyBox.';
+const SUB_GR = 'Публікація вакансії у групи й канали, де ви вже є. Виберіть групи — решту зробить FoxyBox.';
+function showTab(which){
+  const dm = which === 'dm';
+  $('#paneDm').style.display = dm ? 'block' : 'none';
+  $('#paneGr').style.display = dm ? 'none' : 'block';
+  $('#tabBtnDm').classList.toggle('active', dm);
+  $('#tabBtnGr').classList.toggle('active', !dm);
+  $('#subtitle').textContent = dm ? SUB_DM : SUB_GR;
+  if(!dm && !groupsLoaded) loadGroups();
+}
+$('#tabBtnDm').addEventListener('click',()=>showTab('dm'));
+$('#tabBtnGr').addEventListener('click',()=>showTab('gr'));
+
+// ── Показники ──
+async function loadStats(){
+  try{
+    const r = await fetch('/api/stats'); const s = await r.json();
+    $('#stTotalContacts').textContent = s.total_contacts;
+    $('#stTotalSent').textContent = s.total_sent;
+    $('#stToday').textContent = s.sent_today;
+    $('#stLeft').textContent = s.remaining_today;
+    $('#stTotalGroups').textContent = s.total_groups;
+    $('#stGroupSent').textContent = s.total_group_sent;
+    $('#stGroupToday').textContent = s.group_sent_today;
+    $('#stGroupLeft').textContent = s.group_remaining_today;
+    const dot = $('#statusDot');
+    if(!s.authorized){
+      dot.innerHTML = 'Telegram ще не підключено — натисніть «Додати акаунт» угорі сторінки.';
+    }else{
+      dot.innerHTML = 'Підключено: <b>'+(s.me||'ваш акаунт')+'</b>' +
+        (s.dry ? ' &middot; тестовий режим, нічого реально не шлеться' : '');
+    }
+    return s;
+  }catch(e){ return null; }
+}
+
+// ── Вакансія з тексту + прев'ю ──
+async function askVacancy(text){
+  try{
+    const r = await fetch('/api/preview',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text})});
+    const d = await r.json();
+    return d.vacancy || '';
+  }catch(e){ return ''; }
+}
+function setVacTag(el,vac){
+  if(vac){ el.innerHTML = 'Вакансія з тексту: <span>'+escapeHtml(vac)+'</span>'; el.classList.add('show'); }
+  else{ el.classList.remove('show'); }
+}
+
+let previewTimer=null;
+function schedulePreview(){ clearTimeout(previewTimer); previewTimer=setTimeout(updatePreview,350); }
+async function updatePreview(){
+  const text = pitch.value.trim();
+  setVacTag($('#vacTag'), text ? await askVacancy(text) : '');
+  const list = parseUsernames();
+  const card = $('#previewCard'), box = $('#previewList');
+  if(text && list.length){
+    card.style.display='block';
+    box.innerHTML = list.slice(0,3).map(u=>tgCard('@'+u,text)).join('') +
+      (list.length>3 ? '<div class="preview-empty">…і ще '+(list.length-3)+'</div>' : '');
+  }else{ card.style.display='none'; }
+}
+function tgCard(name,text){
+  const letter = (name.replace(/^@/,'')[0]||'?').toUpperCase();
+  return '<div class="tg-msg"><div class="avatar">'+escapeHtml(letter)+'</div>'+
+    '<div class="bubble-wrap"><div class="bubble-name">'+escapeHtml(name)+'</div>'+
+    '<div class="bubble">'+escapeHtml(text)+'</div></div></div>';
+}
+function parseUsernames(){
+  return usernames.value.split('\n')
+    .map(x=>x.trim().replace(/^https?:\/\//,'').replace(/^t\.me\//,'').replace(/^@/,'').trim())
+    .filter(Boolean);
+}
+pitch.addEventListener('input',schedulePreview);
+usernames.addEventListener('input',schedulePreview);
+
+let gPreviewTimer=null;
+function scheduleGroupPreview(){ clearTimeout(gPreviewTimer); gPreviewTimer=setTimeout(updateGroupPreview,350); }
+async function updateGroupPreview(){
+  const text = groupPitch.value.trim();
+  setVacTag($('#gVacTag'), text ? await askVacancy(text) : '');
+  const chosen = selectedGroups();
+  const card = $('#gPreviewCard'), box = $('#gPreviewList');
+  if(text && chosen.length){
+    card.style.display='block';
+    box.innerHTML = chosen.slice(0,3).map(g=>tgCard(g.title,text)).join('') +
+      (chosen.length>3 ? '<div class="preview-empty">…і ще '+(chosen.length-3)+'</div>' : '');
+  }else{ card.style.display='none'; }
+}
+groupPitch.addEventListener('input',scheduleGroupPreview);
+
+// ── Список груп ──
+let groupsLoaded=false, groupsData=[];
+async function loadGroups(){
+  const box=$('#groupList'), btn=$('#reloadGroups');
+  btn.disabled=true;
+  box.innerHTML='<div class="gempty">Завантажую список груп із Telegram… Це може зайняти кілька секунд.</div>';
+  try{
+    const r=await fetch('/api/groups');
+    const d=await r.json();
+    if(!r.ok){ box.innerHTML='<div class="gempty">'+escapeHtml(d.error||'Не вдалося завантажити список.')+'</div>'; return; }
+    groupsData=d.groups||[];
+    groupsLoaded=true;
+    renderGroups();
+  }catch(e){
+    box.innerHTML='<div class="gempty">Не вдалося завантажити список: '+escapeHtml(e.message)+'</div>';
+  }finally{ btn.disabled=false; }
+}
+function renderGroups(){
+  const box=$('#groupList');
+  if(!groupsData.length){
+    box.innerHTML='<div class="gempty">Груп не знайдено. Приєднайтесь у Telegram до груп, де публікують вакансії, і натисніть «Оновити».</div>';
+    return;
+  }
+  box.innerHTML = groupsData.map((g,i)=>{
+    const off = g.can_post ? '' : ' off';
+    const kind = g.kind==='channel' ? 'канал' : 'група';
+    const meta = [kind, g.username ? escapeHtml(g.username) : null,
+                  g.can_post ? null : 'писати не дозволено'].filter(Boolean).join(' · ');
+    return '<label class="grow'+off+'">'+
+      '<input type="checkbox" data-i="'+i+'"'+(g.can_post?'':' disabled')+'>'+
+      '<span><span class="gname">'+escapeHtml(g.title)+'</span>'+
+      '<span class="gmeta">'+meta+'</span></span></label>';
+  }).join('');
+  box.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('change',()=>{ updateGroupSel(); scheduleGroupPreview(); });
+  });
+  updateGroupSel();
+}
+function selectedGroups(){
+  return Array.from($('#groupList').querySelectorAll('input[type=checkbox]:checked'))
+    .map(cb=>groupsData[+cb.dataset.i]).filter(Boolean);
+}
+function updateGroupSel(){
+  $('#groupSel').innerHTML='Вибрано: <b>'+selectedGroups().length+'</b>';
+}
+$('#reloadGroups').addEventListener('click',loadGroups);
+
+// ── Спільний рушій кампанії (особисті + групи) ──
+function makeRunner(cfg){
+  let countdownTimer=null;
+  return async function run(payload,total0){
+    const btn=$(cfg.btn), prog=$(cfg.prog);
+    btn.disabled=true;
+    prog.classList.add('show');
+    $(cfg.log).innerHTML=''; $(cfg.banner).innerHTML='';
+    $(cfg.bar).style.width='0%';
+    $(cfg.line).textContent='Готуюсь…';
+    let total=total0;
+
+    try{
+      const resp=await fetch(cfg.url,{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)});
+
+      if(!resp.ok){
+        const d=await resp.json().catch(()=>({error:'Помилка сервера'}));
+        showBanner(d.error||'Помилка','err'); finish(); return;
+      }
+
+      const reader=resp.body.getReader(); const dec=new TextDecoder(); let buf='';
+      while(true){
+        const {value,done}=await reader.read(); if(done) break;
+        buf+=dec.decode(value,{stream:true});
+        let nl;
+        while((nl=buf.indexOf('\n'))>=0){
+          const line=buf.slice(0,nl).trim(); buf=buf.slice(nl+1);
+          if(!line) continue;
+          handleEvent(JSON.parse(line));
+        }
+      }
+    }catch(e){
+      showBanner('Зʼєднання перервалось: '+e.message+'. Перевірте, чи не закрилось чорне вікно FoxyBox.','err');
+    }
+    finish();
+
+    function who(ev){ return cfg.prefix + (ev.name || ev.username || ''); }
+
+    function handleEvent(ev){
+      if(ev.type==='start'){
+        total=ev.total;
+        $(cfg.line).textContent = ev.dry
+          ? 'Тестовий прогон: '+total+' '+cfg.wordAcc+' (реально не шлються)'
+          : cfg.verbIng+' '+total+' '+cfg.wordAcc+'…';
+        if(ev.overflow>0) addLog(cfg.log,'<span class="skip">'+ev.overflow+' відкладено: сьогодні впираємось у денний ліміт.</span>');
+      }
+      else if(ev.type==='sent'){
+        $(cfg.bar).style.width=Math.round(ev.index/total*100)+'%';
+        addLog(cfg.log,'<span class="ok">✓ '+cfg.verbDone+' '+escapeHtml(who(ev))+'</span>');
+        if(ev.wait>0){ startCountdown(ev.index,total,ev.wait); }
+        else{ $(cfg.line).textContent=cfg.verbDoneCap+' '+ev.index+'/'+total; }
+      }
+      else if(ev.type==='skipped'){
+        addLog(cfg.log,'<span class="skip">— пропущено '+escapeHtml(who(ev))+' ('+escapeHtml(ev.reason)+')</span>');
+      }
+      else if(ev.type==='stopped'){
+        clearInterval(countdownTimer);
+        addLog(cfg.log,'<span class="stop">■ зупинено на '+escapeHtml(who(ev))+'</span>');
+        showBanner(ev.message,'err');
+      }
+      else if(ev.type==='error'){
+        showBanner(ev.message,'err');
+      }
+      else if(ev.type==='finished'){
+        clearInterval(countdownTimer);
+        $(cfg.bar).style.width='100%';
+        let msg = ev.dry
+          ? 'Тест завершено: успішно опрацьовано '+ev.sent+' з '+ev.requested+'. Реально нічого не надсилалось.'
+          : 'Готово! '+cfg.verbDoneCap+' '+ev.sent+' з '+ev.requested+'.';
+        if(ev.overflow>0) msg+=' Ще '+ev.overflow+' лишились на завтра через денний ліміт.';
+        $(cfg.line).textContent=msg;
+        showBanner(msg,'ok');
+      }
+    }
+
+    function startCountdown(index,total,secs){
+      clearInterval(countdownTimer);
+      let left=secs;
+      const tick=()=>{ $(cfg.line).textContent=cfg.verbDoneCap+' '+index+'/'+total+', наступне через '+left+' с'; left--;
+        if(left<0) clearInterval(countdownTimer); };
+      tick(); countdownTimer=setInterval(tick,1000);
+    }
+    function showBanner(msg,kind){
+      $(cfg.banner).innerHTML='<div class="banner'+(kind==='err'?' err':'')+'">'+escapeHtml(msg)+'</div>';
+    }
+    function finish(){
+      clearInterval(countdownTimer);
+      btn.disabled=false;
+      loadStats();
+    }
+  };
+}
+function addLog(sel,html){ const l=$(sel); l.insertAdjacentHTML('beforeend',html+'<br>'); l.scrollTop=l.scrollHeight; }
+
+const runDm = makeRunner({
+  url:'/api/send', btn:'#runBtn', prog:'#progress', line:'#progLine',
+  bar:'#progBar', log:'#progLog', banner:'#progBanner',
+  prefix:'@', wordAcc:'повідомлень', verbIng:'Надсилаю',
+  verbDone:'надіслано', verbDoneCap:'Надіслано',
+});
+const runGr = makeRunner({
+  url:'/api/send_groups', btn:'#runGroupBtn', prog:'#gprogress', line:'#gprogLine',
+  bar:'#gprogBar', log:'#gprogLog', banner:'#gprogBanner',
+  prefix:'', wordAcc:'груп', verbIng:'Публікую в',
+  verbDone:'опубліковано в', verbDoneCap:'Опубліковано',
+});
+
+$('#runBtn').addEventListener('click',()=>{
+  const text=pitch.value.trim(), list=parseUsernames();
+  if(!text){ alert('Впишіть текст повідомлення.'); return; }
+  if(!list.length){ alert('Додайте хоча б один юзернейм.'); return; }
+  runDm({text,usernames:list}, list.length);
+});
+
+$('#runGroupBtn').addEventListener('click',()=>{
+  const text=groupPitch.value.trim(), chosen=selectedGroups();
+  if(!text){ alert('Впишіть текст поста.'); return; }
+  if(!chosen.length){ alert('Позначте хоча б одну групу.'); return; }
+  if(!confirm('Опублікувати оголошення у '+chosen.length+' груп(и)?\n\nПеревірте, що правила цих груп дозволяють вакансії.')) return;
+  runGr({text, group_ids:chosen.map(g=>g.id)}, chosen.length);
+});
+
+// старт
+loadAccounts();
+loadStats();
+setInterval(loadStats, 20000);
+</script>
+</body>
+</html>

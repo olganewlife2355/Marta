@@ -1,0 +1,8 @@
+# Приватні файли — ніколи не комітити:
+# сесії Telegram, бази контактів, логи, список акаунтів
+*.session
+*.session-journal
+foxybox_db*.json
+foxybox_accounts.json
+foxybox.log
+*.json.tmp
