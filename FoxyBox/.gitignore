@@ -6,3 +6,4 @@ foxybox_db*.json
 foxybox_accounts.json
 foxybox.log
 *.json.tmp
+foxybox_connectors.json

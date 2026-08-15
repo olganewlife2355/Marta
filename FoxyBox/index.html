@@ -85,7 +85,7 @@
 
   /* ── Вкладки ── */
   .tabs{
-    display:grid;grid-template-columns:1fr 1fr;gap:6px;
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;
     background:var(--card);border:1px solid var(--line);
     border-radius:16px;padding:6px;margin-bottom:18px;
   }
@@ -168,6 +168,28 @@
   .gempty{color:var(--muted);font-size:14px;padding:14px 4px;line-height:1.5}
   .gsel{color:var(--muted);font-size:13.5px;margin-top:12px}
   .gsel b{color:var(--accent)}
+
+  /* ── Дашборд ── */
+  .dpost{border:1px solid var(--line);border-radius:15px;padding:14px 15px;margin-bottom:12px;background:#0f1413}
+  .dpost:last-child{margin-bottom:0}
+  .dpost-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+  .dpost-date{color:var(--muted);font-size:12.5px;font-weight:700}
+  .dpost-vac{color:var(--accent);font-size:12.5px;font-weight:700}
+  .dpost-text{font-size:14px;line-height:1.45;color:#dfe7e4;margin:7px 0 10px;
+              display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .dtable{width:100%;border-collapse:collapse;font-size:13.5px}
+  .dtable td{padding:6px 8px;border-top:1px solid rgba(255,255,255,.05)}
+  .dtable td.t{font-weight:700}
+  .dtable td.m{text-align:right;color:var(--muted);white-space:nowrap}
+  .dtable td.m b{color:var(--text)}
+  .dtable a{color:var(--accent);text-decoration:none;font-weight:700;font-size:12.5px}
+  .dgone{color:#ff9b9b;font-size:12.5px}
+  .connrow{display:flex;align-items:center;gap:10px;padding:9px 4px;border-top:1px solid rgba(255,255,255,.05)}
+  .connrow:first-child{border-top:none}
+  .connrow .cdot{width:9px;height:9px;border-radius:50%;flex:0 0 9px}
+  .connrow .cname{font-weight:700;font-size:14px;flex:1}
+  .connrow .cstat{font-size:12.5px;color:var(--muted)}
+  .cdot.on{background:var(--accent)} .cdot.wait{background:#ffd15c} .cdot.plan{background:#3c4644}
 
   /* ── Показники ── */
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0 16px}
@@ -289,6 +311,7 @@
   <div class="tabs">
     <button class="tab active" id="tabBtnDm">Особисті повідомлення</button>
     <button class="tab" id="tabBtnGr">Пости в групи</button>
+    <button class="tab" id="tabBtnDash">Дашборд</button>
   </div>
 
   <!-- ══════════ ВКЛАДКА 1: особисті повідомлення ══════════ -->
@@ -389,6 +412,35 @@
 
   </div>
 
+  <!-- ══════════ ВКЛАДКА 3: дашборд ══════════ -->
+  <div id="paneDash" style="display:none">
+
+    <div class="stats">
+      <div class="stat"><div class="num" id="dashPosts">0</div><div class="cap">Постів опубліковано</div></div>
+      <div class="stat"><div class="num accent" id="dashViews">0</div><div class="cap">Переглядів разом</div></div>
+      <div class="stat"><div class="num" id="dashReactions">0</div><div class="cap">Реакцій</div></div>
+      <div class="stat"><div class="num" id="dashForwards">0</div><div class="cap">Пересилань</div></div>
+    </div>
+
+    <div class="card">
+      <div class="glist-head">
+        <div>
+          <label class="field-title">Опубліковані пости</label>
+          <p class="hint" style="margin-bottom:0">Статистика активного акаунта. Перегляди рахуються лише в каналах — у звичайних групах Telegram їх не показує.</p>
+        </div>
+        <button class="mini-btn" id="dashReload">Оновити</button>
+      </div>
+      <div id="dashList"><div class="gempty">Натисніть «Оновити», щоб зібрати свіжу статистику з Telegram.</div></div>
+    </div>
+
+    <div class="card">
+      <label class="field-title">Платформи</label>
+      <p class="hint">Центр постингу крок за кроком підключає нові платформи. Як пройти реєстрації — у файлі «ПІДКЛЮЧЕННЯ_ПЛАТФОРМ.md» у папці FoxyBox.</p>
+      <div id="connList"></div>
+    </div>
+
+  </div>
+
   <div class="status-dot" id="statusDot"></div>
 
   <div class="foot">
@@ -465,8 +517,9 @@ async function removeAccount(id){
   finally{ accBusy=false; }
 }
 function afterAccountChange(){
-  // у кожного акаунта свої групи й своя база — скидаємо все підвантажене
-  groupsLoaded=false; groupsData=[];
+  // у кожного акаунта свої групи, база й статистика — скидаємо все підвантажене
+  groupsLoaded=false; groupsData=[]; dashLoaded=false;
+  $('#dashList').innerHTML='<div class="gempty">Натисніть «Оновити», щоб зібрати статистику цього акаунта.</div>';
   $('#groupList').innerHTML='<div class="gempty">Натисніть «Оновити», щоб підтягнути групи цього акаунта.</div>';
   updateGroupSel();
   $('#gPreviewCard').style.display='none';
@@ -549,19 +602,26 @@ function accDone(d){
   });
 
 // ── Вкладки ──
-const SUB_DM = 'Тепла розсилка перших повідомлень кандидатам у Telegram. Вставте піч і список — решту зробить FoxyBox.';
-const SUB_GR = 'Публікація вакансії у групи й канали, де ви вже є. Виберіть групи — решту зробить FoxyBox.';
+const TABS = {
+  dm:   {pane:'#paneDm',   btn:'#tabBtnDm',
+         sub:'Тепла розсилка перших повідомлень кандидатам у Telegram. Вставте піч і список — решту зробить FoxyBox.'},
+  gr:   {pane:'#paneGr',   btn:'#tabBtnGr',
+         sub:'Публікація вакансії у групи й канали, де ви вже є. Виберіть групи — решту зробить FoxyBox.'},
+  dash: {pane:'#paneDash', btn:'#tabBtnDash',
+         sub:'Що відбувається з вашими постами: перегляди, реакції, пересилання — по кожній групі й каналу.'},
+};
 function showTab(which){
-  const dm = which === 'dm';
-  $('#paneDm').style.display = dm ? 'block' : 'none';
-  $('#paneGr').style.display = dm ? 'none' : 'block';
-  $('#tabBtnDm').classList.toggle('active', dm);
-  $('#tabBtnGr').classList.toggle('active', !dm);
-  $('#subtitle').textContent = dm ? SUB_DM : SUB_GR;
-  if(!dm && !groupsLoaded) loadGroups();
+  for(const k in TABS){
+    $(TABS[k].pane).style.display = k===which ? 'block' : 'none';
+    $(TABS[k].btn).classList.toggle('active', k===which);
+  }
+  $('#subtitle').textContent = TABS[which].sub;
+  if(which==='gr' && !groupsLoaded) loadGroups();
+  if(which==='dash' && !dashLoaded) loadDashboard();
 }
 $('#tabBtnDm').addEventListener('click',()=>showTab('dm'));
 $('#tabBtnGr').addEventListener('click',()=>showTab('gr'));
+$('#tabBtnDash').addEventListener('click',()=>showTab('dash'));
 
 // ── Показники ──
 async function loadStats(){
@@ -812,6 +872,68 @@ $('#runGroupBtn').addEventListener('click',()=>{
   if(!confirm('Опублікувати оголошення у '+chosen.length+' груп(и)?\n\nПеревірте, що правила цих груп дозволяють вакансії.')) return;
   runGr({text, group_ids:chosen.map(g=>g.id)}, chosen.length);
 });
+
+// ── Дашборд ──
+let dashLoaded=false;
+function fmtNum(v){
+  if(v===null||v===undefined) return '—';
+  return v>=1000 ? (v/1000).toFixed(1).replace('.0','')+'k' : String(v);
+}
+async function loadDashboard(){
+  const box=$('#dashList'), btn=$('#dashReload');
+  btn.disabled=true;
+  box.innerHTML='<div class="gempty">Збираю свіжу статистику з Telegram…</div>';
+  try{
+    const r=await fetch('/api/dashboard');
+    const d=await r.json();
+    if(!r.ok){ box.innerHTML='<div class="gempty">'+escapeHtml(d.error||'Не вдалося зібрати статистику.')+'</div>'; return; }
+    dashLoaded=true;
+    $('#dashPosts').textContent=fmtNum(d.totals.posts);
+    $('#dashViews').textContent=fmtNum(d.totals.views);
+    $('#dashReactions').textContent=fmtNum(d.totals.reactions);
+    $('#dashForwards').textContent=fmtNum(d.totals.forwards);
+    renderDashPosts(d.posts||[]);
+    renderConnectors(d.connectors||[]);
+  }catch(e){
+    box.innerHTML='<div class="gempty">Помилка звʼязку: '+escapeHtml(e.message)+'</div>';
+  }finally{ btn.disabled=false; }
+}
+function renderDashPosts(posts){
+  const box=$('#dashList');
+  if(!posts.length){
+    box.innerHTML='<div class="gempty">Поки що порожньо. Опублікуйте перший пост у вкладці «Пости в групи» — і тут зʼявиться його статистика.</div>';
+    return;
+  }
+  box.innerHTML=posts.map(p=>{
+    const rows=p.targets.map(t=>{
+      const link=t.link?' <a href="'+escapeHtml(t.link)+'" target="_blank">відкрити</a>':'';
+      const metrics = t.gone
+        ? '<td class="m" colspan="4"><span class="dgone">пост видалено</span></td>'
+        : '<td class="m">👁 <b>'+fmtNum(t.views)+'</b></td>'+
+          '<td class="m">❤️ <b>'+fmtNum(t.reactions)+'</b></td>'+
+          '<td class="m">🔁 <b>'+fmtNum(t.forwards)+'</b></td>'+
+          '<td class="m">💬 <b>'+fmtNum(t.replies)+'</b></td>';
+      return '<tr><td class="t">'+escapeHtml(t.title)+link+'</td>'+metrics+'</tr>';
+    }).join('');
+    const vac=p.vacancy?'<span class="dpost-vac">'+escapeHtml(p.vacancy)+'</span>':'';
+    return '<div class="dpost">'+
+      '<div class="dpost-head"><span class="dpost-date">'+escapeHtml(p.date||'')+'</span>'+vac+'</div>'+
+      '<div class="dpost-text">'+escapeHtml(p.text||'')+'</div>'+
+      '<table class="dtable">'+rows+'</table></div>';
+  }).join('');
+}
+function renderConnectors(list){
+  $('#connList').innerHTML=list.map(c=>{
+    const cls = c.status==='connected'?'on':(c.status==='keys_saved'?'wait':'plan');
+    const stat = c.status==='connected' ? 'підключено'+(c.detail?' · '+escapeHtml(c.detail):'')
+               : c.status==='keys_saved' ? 'ключі збережено — підключимо наступним кроком'
+               : 'очікує підключення';
+    return '<div class="connrow"><span class="cdot '+cls+'"></span>'+
+      '<span class="cname">'+escapeHtml(c.name)+'</span>'+
+      '<span class="cstat">'+stat+'</span></div>';
+  }).join('');
+}
+$('#dashReload').addEventListener('click',loadDashboard);
 
 // старт
 loadAccounts();

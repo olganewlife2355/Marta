@@ -168,6 +168,8 @@ def _default_db() -> dict:
         "contacts": {}, "daily_sent": {}, "total_sent": 0,
         # історія постів у групи
         "groups": {}, "group_daily_sent": {}, "total_group_sent": 0,
+        # журнал опублікованих постів — для дашборда статистики
+        "posts": [],
     }
 
 
@@ -728,6 +730,7 @@ async def run_group_campaign(text: str, group_ids: list, q: Queue):
              overflow=len(overflow), dry=DRY)
 
         posted = 0
+        posted_targets = []          # для журналу постів (дашборд)
         for i, gid in enumerate(to_post, start=1):
             entity = await _resolve_group(gid)
             if entity is None:
@@ -752,9 +755,15 @@ async def run_group_campaign(text: str, group_ids: list, q: Queue):
                 continue
 
             try:
+                msg_id = None
                 if not DRY:
-                    await client.send_message(entity, text)
+                    sent_msg = await client.send_message(entity, text)
+                    msg_id = getattr(sent_msg, "id", None)
                 posted += 1
+                posted_targets.append({
+                    "gid": gid, "title": title, "msg_id": msg_id,
+                    "username": getattr(entity, "username", None),
+                })
 
                 with _db_lock:
                     db = load_db()
@@ -825,6 +834,20 @@ async def run_group_campaign(text: str, group_ids: list, q: Queue):
                 log.info("skip group %s: %s", title, e)
                 continue
 
+        # записуємо пост у журнал — з нього живе дашборд
+        if posted_targets and not DRY:
+            with _db_lock:
+                db = load_db()
+                db.setdefault("posts", []).append({
+                    "date": today_str(),
+                    "time": now_iso(),
+                    "text": text.strip()[:400],
+                    "vacancy": vacancy,
+                    "platform": "telegram",
+                    "targets": posted_targets,
+                })
+                save_db(db)
+
         emit(type="finished", sent=posted, requested=len(to_post),
              overflow=len(overflow), dry=DRY)
     except Exception as e:
@@ -832,6 +855,108 @@ async def run_group_campaign(text: str, group_ids: list, q: Queue):
         emit(type="error", message=f"Несподівана помилка: {e}")
     finally:
         emit(type="done")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Дашборд — жива статистика опублікованих постів
+# ─────────────────────────────────────────────────────────────────────────────
+async def collect_stats() -> dict:
+    """Читає з Telegram актуальні перегляди/реакції для кожного поста журналу."""
+    db = load_db()
+    posts = db.get("posts", [])
+    out = []
+    tot_views = tot_reactions = tot_forwards = tot_replies = 0
+
+    for p in reversed(posts):                      # свіжі згори
+        targets_out = []
+        for t in p.get("targets", []):
+            row = {"title": t.get("title") or "—", "views": None,
+                   "forwards": None, "reactions": None, "replies": None,
+                   "link": None, "gone": False}
+            if t.get("username") and t.get("msg_id"):
+                row["link"] = f"https://t.me/{t['username']}/{t['msg_id']}"
+
+            ent = await _resolve_group(t["gid"]) if t.get("gid") else None
+            if ent is None or not t.get("msg_id"):
+                row["gone"] = ent is None
+                targets_out.append(row)
+                continue
+            try:
+                msg = await client.get_messages(ent, ids=t["msg_id"])
+            except errors.FloodWaitError:
+                raise
+            except Exception as e:
+                log.info("stats %s/%s: %s", t.get("title"), t.get("msg_id"), e)
+                targets_out.append(row)
+                continue
+
+            if msg is None:
+                row["gone"] = True                 # пост видалили в групі
+            else:
+                row["views"] = getattr(msg, "views", None)
+                row["forwards"] = getattr(msg, "forwards", None)
+                r = getattr(msg, "reactions", None)
+                row["reactions"] = (sum(rc.count for rc in r.results)
+                                    if r and getattr(r, "results", None) else 0)
+                rep = getattr(msg, "replies", None)
+                row["replies"] = getattr(rep, "replies", None) if rep else None
+                tot_views += row["views"] or 0
+                tot_reactions += row["reactions"] or 0
+                tot_forwards += row["forwards"] or 0
+                tot_replies += row["replies"] or 0
+            targets_out.append(row)
+
+        out.append({"date": p.get("date"), "time": p.get("time"),
+                    "text": p.get("text"), "vacancy": p.get("vacancy"),
+                    "platform": p.get("platform", "telegram"),
+                    "targets": targets_out})
+
+    return {"posts": out,
+            "totals": {"posts": len(out), "views": tot_views,
+                       "reactions": tot_reactions, "forwards": tot_forwards,
+                       "replies": tot_replies}}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Платформи (конектори) — Telegram працює, решта чекають на ключі
+# ─────────────────────────────────────────────────────────────────────────────
+CONNECTORS_PATH = HERE / "foxybox_connectors.json"
+
+# майбутні платформи центру постингу; wired=False поки немає токенів
+PLATFORMS = [
+    {"id": "telegram",   "name": "Telegram",                    "wired": True},
+    {"id": "threads",    "name": "Threads",                     "wired": False},
+    {"id": "facebook",   "name": "Facebook (сторінка)",         "wired": False},
+    {"id": "instagram",  "name": "Instagram (Business)",        "wired": False},
+    {"id": "linkedin",   "name": "LinkedIn (особистий)",        "wired": False},
+    {"id": "linkedin_co","name": "LinkedIn (сторінка компанії)","wired": False},
+]
+
+
+def load_connectors() -> dict:
+    if CONNECTORS_PATH.exists():
+        try:
+            with open(CONNECTORS_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            log.error("connectors read: %s", e)
+    return {}
+
+
+def connectors_status() -> list:
+    """Статус кожної платформи для дашборда."""
+    conf = load_connectors()
+    out = []
+    for p in PLATFORMS:
+        if p["id"] == "telegram":
+            status = "connected" if _me_cache["authorized"] else "waiting"
+            detail = _me_cache["username"] or ""
+        else:
+            status = "keys_saved" if conf.get(p["id"]) else "planned"
+            detail = ""
+        out.append({"id": p["id"], "name": p["name"],
+                    "status": status, "detail": detail})
+    return out
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -882,6 +1007,20 @@ class Handler(BaseHTTPRequestHandler):
             s["authorized"] = _me_cache["authorized"]
             s["me"] = _me_cache["username"] or _me_cache["name"]
             self._json(s)
+        elif path == "/api/dashboard":
+            if not _me_cache["authorized"]:
+                self._json({"error": "Telegram не підключено."}, 400)
+                return
+            try:
+                data = run_coro(collect_stats())
+                data["connectors"] = connectors_status()
+                self._json(data)
+            except errors.FloodWaitError as e:
+                self._json({"error": f"Telegram просить зачекати {e.seconds} с. "
+                                     f"Оновіть статистику трохи пізніше."}, 429)
+            except Exception as e:
+                log.exception("dashboard failed")
+                self._json({"error": f"Не вдалося зібрати статистику ({type(e).__name__})."}, 500)
         elif path == "/api/accounts":
             data = load_accounts()
             cur = data["current"]
