@@ -1,0 +1,9 @@
+# Telethon session files — дають повний доступ до Telegram-акаунта
+*.session
+*.session-journal
+
+# Вивантажені дані
+telegram_members.csv
+
+__pycache__/
+*.pyc
