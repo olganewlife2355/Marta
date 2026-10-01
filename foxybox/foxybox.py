@@ -32,7 +32,7 @@ from zoneinfo import ZoneInfo
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 try:
-    from telethon import TelegramClient, errors
+    from telethon import TelegramClient, errors, utils
 except ImportError:
     print("FoxyBox: не знайдено бібліотеку Telethon.")
     print("Запускайте FoxyBox подвійним кліком по FoxyBox.command (Mac) або FoxyBox.bat (Windows):")
@@ -56,6 +56,9 @@ PORT = 8770
 DAILY_LIMIT = 30               # максимум повідомлень на день
 PAUSE_MIN = 18                 # мінімальна пауза між відправками, секунд
 PAUSE_MAX = 24                 # максимальна пауза між відправками, секунд
+GROUP_DAILY_LIMIT = 15         # максимум постів у групи на день
+GROUP_PAUSE_MIN = 40           # пауза між постами в групи, секунд
+GROUP_PAUSE_MAX = 70
 try:
     TZ = ZoneInfo("Europe/Paris")  # ліміт скидається о 00:00 CET
 except Exception:
@@ -105,7 +108,8 @@ _db_lock = threading.Lock()
 
 
 def _default_db() -> dict:
-    return {"contacts": {}, "daily_sent": {}, "total_sent": 0}
+    return {"contacts": {}, "daily_sent": {}, "total_sent": 0,
+            "groups": {}, "daily_groups": {}}
 
 
 def load_db() -> dict:
@@ -170,7 +174,11 @@ def personalize(text: str, first_name: str) -> str:
 
 def stats(db: dict) -> dict:
     sent_today = db["daily_sent"].get(today_str(), 0)
+    groups_today = db["daily_groups"].get(today_str(), 0)
     return {
+        "groups_today": groups_today,
+        "groups_remaining_today": max(0, GROUP_DAILY_LIMIT - groups_today),
+        "group_limit": GROUP_DAILY_LIMIT,
         "total_contacts": len(db["contacts"]),
         "total_sent": db.get("total_sent", 0),
         "sent_today": sent_today,
@@ -509,6 +517,178 @@ async def run_campaign(text: str, usernames: list, q: Queue, resend: bool = Fals
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  Режим «Групи»: пост вакансії в чати, де ви учасник
+# ─────────────────────────────────────────────────────────────────────────────
+_group_cache = {}   # peer_id -> entity з останнього завантаження списку груп
+
+
+def _can_post(entity) -> bool:
+    """Приблизна перевірка, чи можна писати в чат (без запиту до Telegram)."""
+    if getattr(entity, "broadcast", False):          # канал: лише адміни
+        return bool(getattr(entity, "creator", False) or getattr(entity, "admin_rights", None))
+    if getattr(entity, "creator", False) or getattr(entity, "admin_rights", None):
+        return True
+    for attr in ("banned_rights", "default_banned_rights"):
+        r = getattr(entity, attr, None)
+        if r is not None and getattr(r, "send_messages", False):
+            return False
+    return True
+
+
+async def list_groups() -> list:
+    """Групи й канали акаунта, куди (ймовірно) можна писати."""
+    out = []
+    async for d in client.iter_dialogs():
+        if not (d.is_group or d.is_channel):
+            continue
+        e = d.entity
+        if getattr(e, "left", False) or getattr(e, "deactivated", False):
+            continue
+        pid = utils.get_peer_id(e)
+        _group_cache[pid] = e
+        out.append({
+            "id": pid,
+            "title": d.name or "—",
+            "username": getattr(e, "username", None),
+            "members": getattr(e, "participants_count", None),
+            "kind": "канал" if getattr(e, "broadcast", False) else "група",
+            "can_post": _can_post(e),
+        })
+    out.sort(key=lambda g: (not g["can_post"], g["title"].lower()))
+    return out
+
+
+def record_group_post(key: str, title: str, vacancy: str) -> None:
+    with _db_lock:
+        db = load_db()
+        g = db["groups"].get(key)
+        if g:
+            g["title"] = title
+            g["last_post"] = today_str()
+            g["count"] = g.get("count", 0) + 1
+            if vacancy:
+                g["vacancy"] = vacancy
+        else:
+            db["groups"][key] = {"title": title, "vacancy": vacancy,
+                                 "first_post": today_str(), "last_post": today_str(),
+                                 "count": 1}
+        d = today_str()
+        db["daily_groups"][d] = db["daily_groups"].get(d, 0) + 1
+        save_db(db)
+
+
+async def _resolve_group(ref):
+    """ref — id з поля вибору або @username / t.me-посилання з ручного поля."""
+    if isinstance(ref, int) or (isinstance(ref, str) and re.fullmatch(r"-?\d+", ref)):
+        pid = int(ref)
+        if pid in _group_cache:
+            return _group_cache[pid]
+        return await client.get_entity(pid)
+    name = norm_username(str(ref))
+    if not name or name.startswith("+") or name.lower().startswith("joinchat"):
+        raise ValueError("приватне посилання-запрошення: спершу вступіть у групу і оберіть її зі списку")
+    return await client.get_entity(name)
+
+
+async def run_group_campaign(text: str, refs: list, q: Queue, resend: bool = False):
+    """Публікує текст у вибрані групи. Події ті самі, що й для особистих."""
+
+    def emit(**ev):
+        ev["mode"] = "group"
+        q.put(ev)
+
+    try:
+        vacancy = extract_vacancy(text)
+        msg = personalize(text, "")      # {name} у групі не має сенсу — прибираємо
+        if not text.strip():
+            emit(type="error", message="Текст повідомлення порожній. Впишіть піч і спробуйте ще раз.")
+            return
+        seen, clean = set(), []
+        for r in refs:
+            k = str(r).strip()
+            if k and k.lower() not in seen:
+                seen.add(k.lower()); clean.append(r)
+        if not clean:
+            emit(type="error", message="Не вибрано жодної групи. Позначте групи у списку або вставте посилання.")
+            return
+
+        db = load_db()
+        remaining = stats(db)["groups_remaining_today"]
+        if remaining <= 0:
+            emit(type="error", message="На сьогодні ліміт постів у групи вичерпано. Спробуйте завтра після 00:00 CET.")
+            return
+        to_send, overflow = clean[:remaining], clean[remaining:]
+        emit(type="start", total=len(to_send), vacancy=vacancy,
+             overflow=len(overflow), already=0, dry=DRY)
+
+        sent = 0
+        posted_keys = set()   # одна група могла прийти і галочкою, і посиланням
+        for i, ref in enumerate(to_send, start=1):
+            label = str(ref)
+            try:
+                entity = await _resolve_group(ref)
+                label = getattr(entity, "title", None) or label
+                key = str(utils.get_peer_id(entity))
+                g = db["groups"].get(key)
+                if key in posted_keys:
+                    emit(type="skipped", username=label, index=i, reason="ця група вже є у списку")
+                    continue
+                if g and g.get("last_post") == today_str() and not resend:
+                    emit(type="skipped", username=label, index=i,
+                         reason="сьогодні вже постили в цю групу")
+                    continue
+                if not DRY:
+                    await client.send_message(entity, msg)
+                    record_group_post(key, label, vacancy)
+                posted_keys.add(key)
+                sent += 1
+                is_last = (i == len(to_send))
+                wait = 0 if is_last else random.randint(GROUP_PAUSE_MIN, GROUP_PAUSE_MAX)
+                emit(type="sent", username=label, index=i, total=len(to_send),
+                     sent=sent, wait=wait, dry=DRY)
+                log.info("group post %s (%d/%d)%s", label, i, len(to_send), " [DRY]" if DRY else "")
+                if not is_last:
+                    await asyncio.sleep(random.randint(1, 2) if DRY else wait)
+            except errors.FloodWaitError as e:
+                emit(type="stopped", username=label, reason="floodwait",
+                     message=f"Telegram просить зачекати {e.seconds} с. Зупиняюсь. Спробуйте пізніше.")
+                log.warning("FloodWait %ss on group %s", e.seconds, label)
+                break
+            except errors.PeerFloodError:
+                emit(type="stopped", username=label, reason="peerflood",
+                     message="Telegram позначив акаунт за надто активну розсилку (PeerFlood). "
+                             "Зупиняюсь. Зробіть паузу на 1-2 дні.")
+                log.warning("PeerFlood on group %s", label)
+                break
+            except errors.SlowModeWaitError as e:
+                emit(type="skipped", username=label, index=i,
+                     reason=f"у групі повільний режим, можна через {e.seconds} с")
+            except (errors.ChatWriteForbiddenError, errors.ChatAdminRequiredError,
+                    errors.ChatSendPlainForbiddenError, errors.UserBannedInChannelError) as e:
+                emit(type="skipped", username=label, index=i,
+                     reason="у цій групі вам не можна писати")
+                log.info("skip group %s: %s", label, type(e).__name__)
+            except (errors.ChannelPrivateError, errors.ChannelInvalidError):
+                emit(type="skipped", username=label, index=i,
+                     reason="група приватна або ви не є її учасником")
+            except ValueError as e:
+                emit(type="skipped", username=label, index=i,
+                     reason=str(e) if "запрошення" in str(e) else "групу не знайдено")
+            except Exception as e:
+                emit(type="skipped", username=label, index=i,
+                     reason=f"помилка ({type(e).__name__})")
+                log.info("skip group %s: %s", label, e)
+
+        emit(type="finished", sent=sent, requested=len(to_send),
+             overflow=len(overflow), already=0, dry=DRY)
+    except Exception as e:
+        log.exception("group campaign crashed")
+        emit(type="error", message=f"Несподівана помилка: {e}")
+    finally:
+        emit(type="done")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  HTTP-сервер
 # ─────────────────────────────────────────────────────────────────────────────
 class Handler(BaseHTTPRequestHandler):
@@ -575,6 +755,14 @@ class Handler(BaseHTTPRequestHandler):
             s["authorized"] = _me_cache["authorized"]
             s["me"] = _me_cache["username"] or _me_cache["name"]
             self._json(s)
+        elif path == "/api/groups":
+            if not _me_cache["authorized"]:
+                self._json({"error": "Telegram не підключено."}, 400); return
+            try:
+                self._json({"groups": run_coro(list_groups())})
+            except Exception as e:
+                log.exception("list_groups")
+                self._json({"error": f"Не вдалося завантажити групи: {e}"}, 500)
         elif path == "/db":
             self._send(200, render_db_page().encode("utf-8"),
                        "text/html; charset=utf-8")
@@ -613,7 +801,16 @@ class Handler(BaseHTTPRequestHandler):
         resend = bool(data.get("resend", False))
 
         q: Queue = Queue()
-        asyncio.run_coroutine_threadsafe(run_campaign(text, usernames, q, resend), _loop)
+        if data.get("mode") == "group":
+            refs = list(data.get("groups", []) or [])
+            links = data.get("links", "")
+            if isinstance(links, str):
+                links = re.split(r"[\s,;]+", links)
+            refs += [l for l in links if l and l.strip()]
+            coro = run_group_campaign(text, refs, q, resend)
+        else:
+            coro = run_campaign(text, usernames, q, resend)
+        asyncio.run_coroutine_threadsafe(coro, _loop)
 
         # стрімимо NDJSON у браузер, рядок за рядком
         self.send_response(200)
@@ -658,6 +855,19 @@ def render_db_page() -> str:
             "</tr>"
         )
     body = "".join(rows) or "<tr><td colspan='5' class='empty'>Поки що порожньо. Після першої розсилки тут з'являться контакти.</td></tr>"
+    grows = []
+    for key, g in sorted(db.get("groups", {}).items(),
+                         key=lambda kv: kv[1].get("last_post", ""), reverse=True):
+        grows.append(
+            "<tr>"
+            f"<td class='u'>{_esc(g.get('title') or key)}</td>"
+            f"<td>{_esc(g.get('vacancy') or '—')}</td>"
+            f"<td>{_esc(g.get('first_post') or '—')}</td>"
+            f"<td>{_esc(g.get('last_post') or '—')}</td>"
+            f"<td class='num'>{g.get('count', 0)}</td>"
+            "</tr>"
+        )
+    gbody = "".join(grows) or "<tr><td colspan='5' class='empty'>Ще не було постів у групи.</td></tr>"
     s = stats(db)
     return f"""<!doctype html><html lang="uk"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -685,6 +895,11 @@ def render_db_page() -> str:
   <table>
     <thead><tr><th>Кандидат</th><th>Вакансія</th><th>Перший контакт</th><th>Останній</th><th>Разів</th></tr></thead>
     <tbody>{body}</tbody>
+  </table>
+  <h1 style="margin-top:40px">Пости в групах</h1>
+  <table>
+    <thead><tr><th>Група</th><th>Вакансія</th><th>Перший пост</th><th>Останній</th><th>Разів</th></tr></thead>
+    <tbody>{gbody}</tbody>
   </table>
 </div></body></html>"""
 

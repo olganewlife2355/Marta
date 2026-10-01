@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>FoxyBox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0d0c; --surface:#14181a; --surface-2:#0f1413;
+    --line:rgba(255,255,255,.08); --line-strong:rgba(255,255,255,.14);
+    --accent:#3ee0c0; --accent-h:#56f0cf; --accent-dim:rgba(62,224,192,.12);
+    --text:#eef3f1; --muted:#9aa6a2; --amber:#ffd15c; --amber-dim:rgba(255,209,92,.09);
+    --red:#ff7a7a; --red-dim:rgba(255,122,122,.10);
+    --font:'Nunito',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);line-height:1.5;
+       background-image:radial-gradient(1200px 640px at 50% -260px,#12211d,transparent);
+       -webkit-font-smoothing:antialiased}
+  .page{max-width:820px;margin:0 auto;padding:36px 20px 64px}
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .logo{width:52px;height:52px;border-radius:16px;background:#101614;border:1px solid var(--line);
+        display:flex;align-items:center;justify-content:center;
+        filter:drop-shadow(0 0 8px rgba(62,224,192,.35))}
+  .logo svg{width:32px;height:32px}
+  h1{font-size:30px;font-weight:800;margin:0;letter-spacing:-.02em}
+  h1 .f{color:var(--accent)}
+  .me{margin-left:auto;color:var(--muted);font-size:14px;text-align:right}
+  .me b{color:var(--text)}
+  .badge{display:inline-block;font-size:12px;font-weight:800;padding:3px 10px;border-radius:99px;
+         background:var(--amber-dim);color:var(--amber);border:1px solid rgba(255,209,92,.3);margin-top:4px}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:22px 0}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+  .stat .n{font-size:22px;font-weight:800}
+  .stat .l{color:var(--muted);font-size:13px}
+
+  .seg{display:flex;background:var(--surface);border:1px solid var(--line-strong);border-radius:99px;
+       padding:4px;gap:4px;width:max-content;max-width:100%;margin:6px 0 18px}
+  .seg button{all:unset;cursor:pointer;color:var(--muted);font-weight:800;font-size:15px;
+       padding:10px 22px;border-radius:99px;transition:background .15s,color .15s}
+  .seg button[aria-pressed="true"]{background:var(--accent);color:#062019;box-shadow:0 3px 12px rgba(62,224,192,.28)}
+  .seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 20px;margin-bottom:14px}
+  label.t{display:block;font-weight:800;margin-bottom:6px}
+  .hint{color:var(--muted);font-size:13.5px;margin:6px 0 0}
+  .hint code,.card code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);
+       border:1px solid var(--line);border-radius:6px;padding:1px 5px;color:#cdefe7}
+  textarea,input[type=search]{width:100%;background:var(--surface-2);color:var(--text);
+       border:1px solid var(--line-strong);border-radius:12px;padding:11px 13px;font:inherit;font-size:15px}
+  textarea{resize:vertical;min-height:120px}
+  textarea:focus,input:focus{outline:none;border-color:var(--accent)}
+  .vac{margin-top:8px;font-size:14px;color:var(--muted)} .vac b{color:var(--accent)}
+
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .btn{all:unset;cursor:pointer;font-weight:800;border-radius:12px;padding:10px 16px;
+       background:var(--surface-2);border:1px solid var(--line-strong);color:var(--text);font-size:14.5px}
+  .btn:hover{border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:#062019;border-color:transparent;padding:14px 22px;font-size:16px;
+       box-shadow:0 4px 16px rgba(62,224,192,.25)}
+  .btn.primary:hover{background:var(--accent-h)}
+  .btn[disabled]{opacity:.5;pointer-events:none}
+
+  .glist{max-height:340px;overflow:auto;margin-top:10px;border:1px solid var(--line);border-radius:12px}
+  .g{display:flex;gap:11px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+  .g:last-child{border-bottom:none}
+  .g:hover{background:rgba(255,255,255,.02)}
+  .g input{width:18px;height:18px;accent-color:var(--accent);flex:0 0 auto}
+  .g .nm{font-weight:700}
+  .g .sub{color:var(--muted);font-size:12.5px}
+  .g.no{opacity:.5}
+  .empty{color:var(--muted);padding:18px;text-align:center;font-size:14px}
+
+  .check{display:flex;gap:9px;align-items:flex-start;color:var(--muted);font-size:14px;margin:4px 0 14px;cursor:pointer}
+  .check input{accent-color:var(--accent);width:17px;height:17px;margin-top:2px}
+
+  .bar{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden;margin:12px 0}
+  .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+  .log{font-size:14px;max-height:360px;overflow:auto}
+  .log div{padding:6px 0;border-bottom:1px solid var(--line)}
+  .log .ok{color:var(--accent)} .log .sk{color:var(--muted)} .log .er{color:var(--red)} .log .wa{color:var(--amber)}
+  .alert{border-radius:12px;padding:11px 14px;margin:10px 0;font-size:14.5px}
+  .alert.err{background:var(--red-dim);border:1px solid rgba(255,122,122,.3);color:#ffc2c2}
+  .alert.warn{background:var(--amber-dim);border:1px solid rgba(255,209,92,.3);color:#f2d99a}
+  .hidden{display:none !important}
+  footer{margin-top:30px;text-align:center;color:var(--muted);font-size:14px}
+  a{color:var(--accent);font-weight:700;text-decoration:none} a:hover{text-decoration:underline}
+  @media(max-width:520px){.me{margin-left:0;text-align:left}}
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 100 100" fill="none" stroke="#3ee0c0" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M28 8 L11 52 L50 93 L89 52 L72 8 L58 38 L50 48 L42 38 Z"/><path d="M36 51 L50 74 L64 51"/>
+        <path d="M45 82 L55 82 L50 88 Z" fill="#3ee0c0"/>
+      </svg>
+    </div>
+    <h1><span class="f">Foxy</span>Box</h1>
+    <div class="me" id="me">Підключення…</div>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><div class="n" id="sDm">–</div><div class="l">особистих сьогодні</div></div>
+    <div class="stat"><div class="n" id="sGr">–</div><div class="l">постів у групи сьогодні</div></div>
+    <div class="stat"><div class="n" id="sTot">–</div><div class="l">кандидатів у базі</div></div>
+  </div>
+
+  <div class="seg" role="group" aria-label="Куди надсилати">
+    <button type="button" data-mode="dm" aria-pressed="true">👤 Особисті</button>
+    <button type="button" data-mode="group" aria-pressed="false">👥 Групи</button>
+  </div>
+
+  <div class="card">
+    <label class="t" for="text">Текст повідомлення</label>
+    <textarea id="text" rows="7" placeholder="Привіт, {name}! Ми в StellarTech шукаємо Product Analyst…"></textarea>
+    <p class="hint dm-only"><code>{name}</code> підставить ім'я кандидата з Telegram: «Привіт, {name}!» → «Привіт, Олена!»</p>
+    <p class="hint group-only hidden">У групах <code>{name}</code> прибирається автоматично (вийде «Привіт!»).</p>
+    <div class="vac" id="vac"></div>
+  </div>
+
+  <!-- Режим: особисті -->
+  <div class="card dm-only">
+    <label class="t" for="users">Кандидати (@username)</label>
+    <textarea id="users" rows="6" placeholder="@ivan_petrenko&#10;t.me/olena_qa&#10;maria_design"></textarea>
+    <p class="hint">По одному в рядку. Посилання <code>t.me/…</code> теж підходять. Кому вже писали, FoxyBox пропустить. <span id="cntUsers"></span></p>
+  </div>
+
+  <!-- Режим: групи -->
+  <div class="card group-only hidden">
+    <div class="row" style="justify-content:space-between">
+      <label class="t" style="margin:0">Мої групи</label>
+      <div class="row">
+        <button class="btn" type="button" id="loadGroups">Завантажити мої групи</button>
+      </div>
+    </div>
+    <p class="hint">Показуються чати й канали, де ви учасник. Позначте, куди постити.</p>
+    <div id="gTools" class="hidden" style="margin-top:10px">
+      <input type="search" id="gSearch" placeholder="Пошук групи…">
+      <div class="row" style="margin-top:8px">
+        <button class="btn" type="button" id="gAll">Позначити видимі</button>
+        <button class="btn" type="button" id="gNone">Зняти всі</button>
+        <span class="hint" id="gCount" style="margin:0"></span>
+      </div>
+    </div>
+    <div class="glist hidden" id="gList"></div>
+
+    <label class="t" for="links" style="margin-top:16px">Або вставте посилання на групи</label>
+    <textarea id="links" rows="3" style="min-height:80px" placeholder="@it_jobs_ua&#10;t.me/qa_jobs"></textarea>
+    <p class="hint">Тільки публічні групи, де ви вже учасник. Приватні посилання (<code>t.me/+…</code>) не працюють: спершу вступіть і оберіть групу у списку вище.</p>
+  </div>
+
+  <label class="check"><input type="checkbox" id="resend">
+    <span class="dm-only">Написати повторно тим, кому вже писали раніше</span>
+    <span class="group-only hidden">Постити повторно в групи, де сьогодні вже постили</span>
+  </label>
+
+  <div class="row">
+    <button class="btn primary" type="button" id="go">Запустити розсилку</button>
+    <a href="/db" target="_blank">Дані по контактах зберігаються тут →</a>
+  </div>
+
+  <div class="card hidden" id="progress" style="margin-top:18px">
+    <div class="row" style="justify-content:space-between">
+      <b id="pTitle">Розсилка</b><span class="hint" id="pCount" style="margin:0"></span>
+    </div>
+    <div class="bar"><i id="pBar"></i></div>
+    <div id="pAlert"></div>
+    <div class="log" id="pLog"></div>
+  </div>
+
+  <footer>🦊 Працює локально на вашому комп'ютері. Щоб зупинити, закрийте чорне вікно FoxyBox.</footer>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  let mode = "dm", groups = [], selected = new Set(), running = false;
+  try { mode = localStorage.getItem("foxy_mode") || "dm"; } catch (e) {}
+
+  // ── статистика ──
+  async function loadStats() {
+    try {
+      const s = await (await fetch("/api/stats")).json();
+      $("me").innerHTML = s.authorized
+        ? `Акаунт: <b>${esc(s.me)}</b>` + (s.dry ? `<br><span class="badge">ТЕСТОВИЙ РЕЖИМ</span>` : "")
+        : `<span style="color:var(--red)">Telegram не підключено</span>`;
+      $("sDm").textContent = `${s.sent_today} / ${s.limit}`;
+      $("sGr").textContent = `${s.groups_today} / ${s.group_limit}`;
+      $("sTot").textContent = s.total_contacts;
+    } catch (e) { $("me").textContent = "FoxyBox не відповідає. Запустіть FoxyBox.bat"; }
+  }
+
+  // ── перемикач режиму ──
+  function setMode(m) {
+    mode = m;
+    try { localStorage.setItem("foxy_mode", m); } catch (e) {}
+    document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === m));
+    document.querySelectorAll(".dm-only").forEach(el => el.classList.toggle("hidden", m !== "dm"));
+    document.querySelectorAll(".group-only").forEach(el => el.classList.toggle("hidden", m !== "group"));
+    $("go").textContent = m === "dm" ? "Запустити розсилку" : "Опублікувати в групи";
+    if (m === "group" && !groups.length) loadGroups();
+  }
+  document.querySelectorAll(".seg button").forEach(b => b.onclick = () => !running && setMode(b.dataset.mode));
+
+  // ── назва вакансії з тексту ──
+  let t;
+  $("text").addEventListener("input", () => {
+    clearTimeout(t);
+    t = setTimeout(async () => {
+      try {
+        const r = await (await fetch("/api/preview", {method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({text: $("text").value})})).json();
+        $("vac").innerHTML = r.vacancy ? `Вакансія в базі: <b>${esc(r.vacancy)}</b>` : "";
+      } catch (e) {}
+    }, 400);
+  });
+  const parseList = v => v.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
+  $("users").addEventListener("input", () => {
+    const n = parseList($("users").value).length;
+    $("cntUsers").textContent = n ? `Зараз у списку: ${n}.` : "";
+  });
+
+  // ── групи ──
+  async function loadGroups() {
+    const b = $("loadGroups");
+    b.disabled = true; b.textContent = "Завантажую…";
+    try {
+      const r = await (await fetch("/api/groups")).json();
+      if (r.error) throw new Error(r.error);
+      groups = r.groups;
+      $("gTools").classList.remove("hidden"); $("gList").classList.remove("hidden");
+      renderGroups();
+      b.textContent = "Оновити список";
+    } catch (e) {
+      $("gList").classList.remove("hidden");
+      $("gList").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+      b.textContent = "Спробувати ще раз";
+    } finally { b.disabled = false; }
+  }
+  function visibleGroups() {
+    const q = $("gSearch").value.trim().toLowerCase();
+    return groups.filter(g => !q || g.title.toLowerCase().includes(q) || (g.username || "").toLowerCase().includes(q));
+  }
+  function renderGroups() {
+    const list = visibleGroups();
+    $("gList").innerHTML = list.length ? list.map(g => `
+      <label class="g ${g.can_post ? "" : "no"}">
+        <input type="checkbox" data-id="${g.id}" ${selected.has(String(g.id)) ? "checked" : ""}>
+        <div><div class="nm">${esc(g.title)}</div>
+        <div class="sub">${g.kind}${g.username ? " · @" + esc(g.username) : " · приватна"}${g.members ? " · " + g.members + " учасн." : ""}${g.can_post ? "" : " · писати, ймовірно, заборонено"}</div></div>
+      </label>`).join("") : `<div class="empty">${groups.length ? "Нічого не знайдено" : "У вас поки немає груп"}</div>`;
+    $("gList").querySelectorAll("input").forEach(cb => cb.onchange = () => {
+      cb.checked ? selected.add(cb.dataset.id) : selected.delete(cb.dataset.id); count();
+    });
+    count();
+  }
+  const count = () => $("gCount").textContent = selected.size ? `Вибрано: ${selected.size}` : "";
+  $("loadGroups").onclick = loadGroups;
+  $("gSearch").oninput = renderGroups;
+  $("gAll").onclick = () => { visibleGroups().filter(g => g.can_post).forEach(g => selected.add(String(g.id))); renderGroups(); };
+  $("gNone").onclick = () => { selected.clear(); renderGroups(); };
+
+  // ── запуск ──
+  function logLine(cls, html) {
+    const d = document.createElement("div"); d.className = cls; d.innerHTML = html; $("pLog").prepend(d);
+  }
+  function alertBox(cls, text) { $("pAlert").innerHTML = `<div class="alert ${cls}">${esc(text)}</div>`; }
+
+  $("go").onclick = async () => {
+    if (running) return;
+    const text = $("text").value;
+    const body = {mode, text, resend: $("resend").checked};
+    let n;
+    if (mode === "dm") { body.usernames = parseList($("users").value); n = body.usernames.length; }
+    else { body.groups = [...selected]; body.links = $("links").value; n = body.groups.length + parseList(body.links).length; }
+    if (!text.trim()) return alert("Впишіть текст повідомлення.");
+    if (!n) return alert(mode === "dm" ? "Додайте хоча б один @username." : "Оберіть хоча б одну групу.");
+    const what = mode === "dm" ? `${n} кандидат(ам) в особисті` : `у ${n} груп(и)`;
+    if (!confirm(`Надіслати ${what}?`)) return;
+
+    running = true; $("go").disabled = true;
+    $("progress").classList.remove("hidden"); $("pLog").innerHTML = ""; $("pAlert").innerHTML = "";
+    $("pBar").style.width = "0"; $("pTitle").textContent = mode === "dm" ? "Розсилка в особисті" : "Пости в групи";
+    let total = 0;
+    try {
+      const res = await fetch("/api/send", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "Помилка " + res.status); }
+      const reader = res.body.getReader(), dec = new TextDecoder();
+      let buf = "";
+      for (;;) {
+        const {value, done} = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, {stream: true});
+        let i;
+        while ((i = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+          if (line) handle(JSON.parse(line));
+        }
+      }
+    } catch (e) { alertBox("err", e.message); }
+    running = false; $("go").disabled = false; loadStats();
+
+    function handle(ev) {
+      const who = mode === "dm" ? "@" + esc(ev.username) : esc(ev.username);
+      switch (ev.type) {
+        case "start":
+          total = ev.total;
+          $("pCount").textContent = `0 / ${total}`;
+          if (ev.already) alertBox("warn", `Пропущено ${ev.already}: їм уже писали раніше (${ev.already_list.join(", ")}).`);
+          if (ev.overflow) logLine("wa", `Денний ліміт: ще ${ev.overflow} не влізли, надішліть їх завтра.`);
+          if (ev.dry) logLine("wa", "Тестовий режим: нічого реально не надсилається.");
+          break;
+        case "sent":
+          $("pCount").textContent = `${ev.index} / ${ev.total}`;
+          $("pBar").style.width = (ev.index / ev.total * 100) + "%";
+          logLine("ok", `✓ ${who}` + (ev.wait ? ` <span class="sk">· пауза ${ev.wait} с</span>` : ""));
+          break;
+        case "skipped":
+          if (total) { $("pCount").textContent = `${ev.index} / ${total}`; $("pBar").style.width = (ev.index / total * 100) + "%"; }
+          logLine("sk", `– ${who}: ${esc(ev.reason)}`);
+          break;
+        case "stopped": alertBox("err", ev.message); break;
+        case "error": alertBox("err", ev.message); break;
+        case "finished":
+          $("pBar").style.width = "100%";
+          logLine("ok", `<b>Готово: надіслано ${ev.sent} з ${ev.requested}.</b>`);
+          break;
+      }
+    }
+  };
+
+  setMode(mode);
+  loadStats();
+})();
+</script>
+</body>
+</html>
