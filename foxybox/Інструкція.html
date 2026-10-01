@@ -175,7 +175,7 @@
       <label for="os-win">Windows</label>
     </div>
     <div class="meta">
-      <span class="chip plain">≈ 15 хвилин</span>
+      <span class="chip plain">≈ 10 хвилин</span>
       <span class="chip plain">Без технічних знань</span>
     </div>
   </header>
@@ -191,10 +191,10 @@
   </div>
 
   <div class="note" style="margin:26px 0 0">
-    <b>Спокійно, це простіше, ніж здається.</b> Вам не треба нічого програмувати, не треба знати команди напам'ять і не треба вставляти жодних «промтів» чи коду з інтернету. Ви лише копіюєте готові рядки звідси й тиснете Enter. Просто йдіть крок за кроком.
+    <b>Спокійно, це простіше, ніж здається.</b> Вам не треба нічого програмувати, редагувати файли чи вставляти код з інтернету. Потрібні лише Python, два ключі від Telegram і подвійний клік. Все інше FoxyBox встановить сам. Просто йдіть крок за кроком.
   </div>
 
-  <div class="section-eyebrow">Встановлення · 6 кроків</div>
+  <div class="section-eyebrow">Встановлення · 4 кроки</div>
 
   <div class="steps">
 
@@ -208,13 +208,13 @@
       </ol>
       <p class="sub">Усередині папки буде кілька файлів. Ось що є що (нічого звідти не виймайте):</p>
       <ul>
-        <li><code>foxybox.py</code> <span style="color:var(--muted)">— сам застосунок (сюди впишете ключі на кроці 5)</span></li>
+        <li><code>foxybox.py</code> <span style="color:var(--muted)">— сам застосунок, відкривати й редагувати не треба</span></li>
         <li><code>index.html</code> <span style="color:var(--muted)">— вигляд застосунку, чіпати не треба</span></li>
         <li class="mac-only"><code>FoxyBox.command</code> <span style="color:var(--muted)">— кнопка запуску (Mac)</span></li>
         <li class="win-only"><code>FoxyBox.bat</code> <span style="color:var(--muted)">— кнопка запуску (Windows)</span></li>
         <li><code>Інструкція.html</code> <span style="color:var(--muted)">— ця сама інструкція</span></li>
       </ul>
-      <div class="note"><b>Головне правило:</b> усі файли мають лишатися <b>разом в одній папці</b>. Не перекладайте їх поодинці — FoxyBox шукає їх поруч.</div>
+      <div class="note"><b>Головне правило:</b> усі файли мають лишатися <b>разом в одній папці</b>. Не перекладайте їх поодинці — FoxyBox шукає їх поруч. Після першого запуску там з'являться ще кілька файлів і прихована папка <code>.venv</code> — це нормально, не видаляйте їх.</div>
     </section>
 
     <section class="step">
@@ -231,19 +231,9 @@
       <p class="sub win-only"><b>Тепер акуратно:</b> клацніть мишкою всередину чорного вікна. Скопіюйте команду нижче (виділіть її мишкою і натисніть <code>Ctrl + C</code>), поверніться у вікно, вставте (клацніть <b>правою</b> кнопкою миші або <code>Ctrl + V</code>) і натисніть <b>Enter</b>:</p>
       <pre class="mac-only"><code>python3 --version</code></pre>
       <pre class="win-only"><code>python --version</code></pre>
-      <p class="sub mac-only">Якщо бачите <code>Python 3.9</code> або вище — переходьте далі. Якщо помилка — завантажте Python з <a href="https://www.python.org/downloads/">python.org/downloads</a>, відкрийте файл <code>.pkg</code> і встановіть (Continue → Agree → Install).</p>
-      <p class="sub win-only">Якщо бачите <code>Python 3.9</code> або вище — переходьте далі. Якщо помилка — завантажте Python з <a href="https://www.python.org/downloads/">python.org/downloads</a>. <b>Обов'язково</b> на першому екрані інсталятора поставте галочку <b>«Add Python to PATH»</b>, потім Install.</p>
-    </section>
-
-    <section class="step">
-      <h2>Встановити Telethon</h2>
-      <p>Telethon — це «перекладач», через який FoxyBox спілкується з Telegram.</p>
-      <p class="sub">У <b>тому самому вікні</b>, що й у кроці 1 (Термінал / Командний рядок), вставте команду нижче — так само: скопіюйте <span class="mac-only">(<code>Cmd + C</code>)</span><span class="win-only">(<code>Ctrl + C</code>)</span>, клацніть у вікно, вставте <span class="mac-only">(<code>Cmd + V</code>)</span><span class="win-only">(права кнопка миші або <code>Ctrl + V</code>)</span> і натисніть <b>Enter</b>:</p>
-      <pre class="mac-only"><code>pip3 install telethon</code></pre>
-      <pre class="win-only"><code>pip install telethon
-pip install tzdata</code></pre>
-      <p class="sub">Зачекайте кілька секунд — побіжить текст. Коли внизу зʼявиться <code>Successfully installed telethon-…</code> — готово, крок виконано.</p>
-      <div class="note win-only"><b>Навіщо tzdata:</b> у Windows нема системної бази часових поясів, а вона потрібна для скидання денного ліміту о 00:00 CET. Якщо забудете — FoxyBox сам нагадає про цю команду при запуску.</div>
+      <p class="sub mac-only">Якщо бачите <code>Python 3.9</code> або вище — переходьте далі. Якщо помилка або вискочило вікно «встановити інструменти розробника» — натисніть «Скасувати», завантажте Python з <a href="https://www.python.org/downloads/">python.org/downloads</a>, відкрийте файл <code>.pkg</code> і встановіть (Continue → Agree → Install).</p>
+      <p class="sub win-only">Якщо бачите <code>Python 3.9</code> або вище — переходьте далі. Якщо помилка або відкрився Microsoft Store — закрийте його і завантажте Python з <a href="https://www.python.org/downloads/">python.org/downloads</a>. <b>Обов'язково</b> на першому екрані інсталятора поставте галочку <b>«Add Python to PATH»</b>, потім Install.</p>
+      <div class="note"><b>Більше в Терміналі нічого вводити не треба.</b> Telethon (бібліотеку для зв'язку з Telegram) FoxyBox встановить сам при першому запуску.</div>
     </section>
 
     <section class="step">
@@ -254,35 +244,28 @@ pip install tzdata</code></pre>
         <li>Натисніть <b>API development tools</b>.</li>
         <li>Заповніть <b>тільки два поля</b>: <b>App title</b> = <code>FoxyBox</code>, <b>Short name</b> = <code>foxybox</code>. Поля <b>URL</b> і <b>Description</b> лишіть порожніми, Platform — <code>Desktop</code>.</li>
         <li>Натисніть <b>Create application</b>.</li>
-        <li>Скопіюйте два значення: <b>api_id</b> (коротке число) і <b>api_hash</b> (довгий рядок).</li>
+        <li>Лишіть цю сторінку відкритою: <b>api_id</b> (коротке число) і <b>api_hash</b> (довгий рядок) знадобляться на наступному кроці.</li>
       </ol>
       <div class="note"><b>Приватне:</b> ці ключі нікому не пересилайте й нікуди не викладайте.</div>
     </section>
 
     <section class="step">
-      <h2>Вписати ключі у програму</h2>
-      <p class="sub mac-only"><b>Як відкрити файл:</b> у папці FoxyBox клацніть по <code>foxybox.py</code> <b>правою</b> кнопкою миші → <b>Відкрити у програмі</b> → <b>TextEdit</b>.</p>
-      <p class="sub win-only"><b>Як відкрити файл:</b> у папці FoxyBox клацніть по <code>foxybox.py</code> <b>правою</b> кнопкою миші → <b>Відкрити за допомогою</b> → <b>Блокнот</b> (Notepad).</p>
-      <p>Угорі файлу знайдіть два рядки, що починаються з <code>API_ID</code> і <code>API_HASH</code>. Замініть у них значення на свої з кроку 4 — число без лапок, а хеш обовʼязково <b>в лапках</b>:</p>
-      <pre><code>API_ID = 1234567
-API_HASH = "ВАШ_ХЕШ_СЮДИ_У_ЛАПКАХ"</code></pre>
-      <p class="sub"><code>1234567</code> і текст у лапках — це лише <b>приклад формату</b>. Зітріть його і впишіть свої два значення. Потім збережіть файл: <span class="mac-only"><code>Cmd + S</code></span><span class="win-only"><code>Ctrl + S</code></span>, і закрийте редактор.</p>
-    </section>
-
-    <section class="step">
       <h2>Перший запуск і вхід</h2>
-      <p>Двічі клацніть <b><span class="mac-only">FoxyBox.command</span><span class="win-only">FoxyBox.bat</span></b>. Відкриється чорне вікно — відповідайте на запитання:</p>
+      <p>Двічі клацніть <b><span class="mac-only">FoxyBox.command</span><span class="win-only">FoxyBox.bat</span></b>. Відкриється чорне вікно. Перший запуск триває 1–2 хвилини (FoxyBox встановлює потрібне), далі він поставить кілька запитань:</p>
       <div class="tablewrap">
         <table>
           <thead><tr><th>Термінал запитає</th><th>Що ввести</th></tr></thead>
           <tbody>
+            <tr><td>api_id</td><td>коротке число з my.telegram.org, Enter</td></tr>
+            <tr><td>api_hash</td><td>довгий рядок з my.telegram.org (скопіюйте повністю), Enter</td></tr>
             <tr><td>Номер телефону</td><td>ваш номер у форматі <code>+380…</code>, Enter</td></tr>
             <tr><td>Код із Telegram</td><td>код, що прийде <b>у самому Telegram</b> (не SMS), Enter</td></tr>
-            <tr><td>Хмарний пароль</td><td>якщо у вас увімкнена двоетапна перевірка — введіть цей пароль; якщо ні — просто Enter</td></tr>
+            <tr><td>Хмарний пароль</td><td>якщо у вас увімкнена двоетапна перевірка — введіть цей пароль; якщо ні — просто Enter. Літери при введенні не видно, це нормально</td></tr>
           </tbody>
         </table>
       </div>
-      <div class="note"><b>Готово!</b> Після «Ви увійшли» браузер відкриється сам. Вхід більше не питатиме — далі просто двічі клацаєте ярлик. 🎉</div>
+      <p class="sub">Вставляти у вікно: <span class="mac-only"><code>Cmd + V</code></span><span class="win-only">права кнопка миші або <code>Ctrl + V</code></span>. Якщо помилились у форматі ключа, FoxyBox підкаже і попросить ще раз.</p>
+      <div class="note"><b>Готово!</b> Після «Ви увійшли» браузер відкриється сам. Ключі й вхід більше не питатиме — далі просто двічі клацаєте ярлик. 🎉</div>
     </section>
 
   </div>
@@ -290,9 +273,12 @@ API_HASH = "ВАШ_ХЕШ_СЮДИ_У_ЛАПКАХ"</code></pre>
   <div class="section-eyebrow">Як користуватись</div>
   <section class="step no-num">
     <p><b>1. Запуск.</b> Двічі клацніть <code class="mac-only">FoxyBox.command</code><code class="win-only">FoxyBox.bat</code> — за кілька секунд відкриється браузер із застосунком.</p>
-    <p><b>2. Розсилка.</b> У вікні застосунку два поля. У перше впишіть <b>текст повідомлення</b> (опис вакансії своїми словами). У друге — <b>список @username</b> кандидатів, по одному в рядку. Натисніть <b>«Запустити розсилку»</b>. Паузи, базу й денний ліміт FoxyBox веде сам.</p>
+    <p><b>2. Розсилка.</b> У вікні застосунку два поля. У перше впишіть <b>текст повідомлення</b> (опис вакансії своїми словами). У друге — <b>список @username</b> кандидатів, по одному в рядку (посилання <code>t.me/...</code> теж підходять). Натисніть <b>«Запустити розсилку»</b>. Паузи, базу й денний ліміт FoxyBox веде сам.</p>
+    <p><b>Звернення на ім'я.</b> Напишіть у тексті <code>{name}</code>, і FoxyBox підставить ім'я кандидата з його профілю Telegram: <code>Привіт, {name}!</code> → «Привіт, Олено!» <span style="color:var(--muted)">(ім'я береться як є, без відмінювання; якщо його нема, вийде просто «Привіт!»)</span>.</p>
+    <p><b>Повторно не пише.</b> Кому ви вже писали раніше, FoxyBox пропустить автоматично. Історію видно на сторінці бази контактів.</p>
     <p><b>3. Зупинити.</b> Закрийте вікно Терміналу або натисніть у ньому <code>Ctrl + C</code>.</p>
     <div class="note"><b>Нічого «програмувати» чи вставляти жодних «промтів» не треба.</b> Єдине, що ви вписуєте у застосунок, — свій текст вакансії та список @username. Це все.</div>
+    <div class="note"><b>Тестовий режим</b> (нічого реально не надсилається, ліміт і база не змінюються): <span class="mac-only">відкрийте Термінал, перетягніть у вікно файл <code>FoxyBox.command</code>, допишіть через пробіл <code>--test</code> і натисніть Enter.</span><span class="win-only">відкрийте Командний рядок, перетягніть у вікно файл <code>FoxyBox.bat</code>, допишіть через пробіл <code>--test</code> і натисніть Enter.</span></div>
     <div class="note"><b>Порада на перший раз:</b> впишіть у список свій власний <code>@username</code> і надішліть повідомлення собі — воно прийде у «Збережені повідомлення» (Saved Messages). Так ви безпечно переконаєтесь, що все працює, нікого не потурбувавши.</div>
   </section>
 
@@ -301,6 +287,14 @@ API_HASH = "ВАШ_ХЕШ_СЮДИ_У_ЛАПКАХ"</code></pre>
   <details>
     <summary>Браузер не відкрився / Термінал закрився з помилкою</summary>
     <div class="body"><p>Найчастіше це збій входу. Відкрийте файл <code>foxybox.log</code> у папці — в останніх рядках буде причина (найпоширеніші — нижче).</p></div>
+  </details>
+  <details>
+    <summary>Пише «Telegram не прийняв api_id / api_hash»</summary>
+    <div class="body"><p>Ключі скопійовано не повністю або з чужої сторінки. FoxyBox їх уже скинув: запустіть ярлик ще раз і вставте обидва значення уважно з <a href="https://my.telegram.org">my.telegram.org</a> → API development tools.</p></div>
+  </details>
+  <details>
+    <summary>Хочу змінити акаунт Telegram або ключі</summary>
+    <div class="body"><p>Закрийте FoxyBox і видаліть з папки файли <code>foxybox_session.session</code> (вхід) та <code>foxybox_config.json</code> (ключі). При наступному запуску FoxyBox запитає все заново. Базу контактів (<code>foxybox_db.json</code>) не чіпайте.</p></div>
   </details>
   <details>
     <summary>Пише про невірний пароль (PasswordHashInvalidError)</summary>
@@ -320,20 +314,21 @@ API_HASH = "ВАШ_ХЕШ_СЮДИ_У_ЛАПКАХ"</code></pre>
   </details>
   <details>
     <summary>Пише «FoxyBox вже працює»</summary>
-    <div class="body"><p>Движок уже запущено — просто відкрийте в браузері <code>http://127.0.0.1:8770</code></p></div>
+    <div class="body"><p>FoxyBox уже запущено в іншому вікні, браузер відкриється сам. Якщо ні — відкрийте адресу <code>http://127.0.0.1:8770</code></p></div>
   </details>
   <details class="mac-only">
     <summary>Подвійний клік нічого не робить</summary>
-    <div class="body"><p>Відкрийте Термінал, наберіть <code>cd </code> (з пробілом), перетягніть у вікно папку FoxyBox, Enter. Далі вставте <code>python3 foxybox.py</code></p></div>
+    <div class="body"><p>Найчастіше файл втратив дозвіл на запуск (буває після пересилання через Telegram). Відкрийте Термінал, наберіть <code>bash </code> (з пробілом), перетягніть у вікно файл <code>FoxyBox.command</code> і натисніть Enter.</p>
+      <p>Щоб надалі працював подвійний клік: наберіть <code>chmod +x </code> (з пробілом), перетягніть той самий файл, Enter.</p></div>
   </details>
   <details class="win-only">
     <summary>Подвійний клік нічого не робить</summary>
-    <div class="body"><p>Відкрийте Командний рядок (<code>cmd</code>), наберіть <code>cd </code> (з пробілом), перетягніть у вікно папку FoxyBox, Enter. Далі вставте <code>python foxybox.py</code></p></div>
+    <div class="body"><p>Відкрийте Командний рядок (<code>cmd</code>), перетягніть у вікно файл <code>FoxyBox.bat</code> і натисніть Enter. Вікно не закриється, і ви побачите текст помилки.</p></div>
   </details>
 
   <footer>
     <div class="fox">🦊</div>
-    <p>FoxyBox працює локально на вашому комп'ютері. Приватні файли — <code>foxybox.py</code> (там ваші ключі) і <code>foxybox_session.session</code> — нікому не пересилайте.</p>
+    <p>FoxyBox працює локально на вашому комп'ютері. Приватні файли — <code>foxybox_config.json</code> (ваші ключі) і <code>foxybox_session.session</code> (ваш вхід у Telegram) — нікому не пересилайте. Колегам передавайте лише чистий архів.</p>
   </footer>
 
 </div>

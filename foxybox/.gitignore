@@ -1,0 +1,6 @@
+.venv/
+foxybox_config.json
+foxybox_session.session*
+foxybox_db.json*
+foxybox.log
+__pycache__/
