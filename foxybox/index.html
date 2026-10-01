@@ -81,6 +81,31 @@
   .tpl .nm small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
   .btn.sm{padding:7px 12px;font-size:13.5px}
   .btn.ghost{background:transparent}
+  .etabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .etabs button{all:unset;cursor:pointer;font-size:13.5px;font-weight:700;color:var(--muted);
+       padding:7px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);position:relative}
+  .etabs button[aria-selected="true"]{color:#062019;background:var(--accent);border-color:transparent}
+  .etabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .etabs button .st{display:inline-block;width:7px;height:7px;border-radius:50%;margin-left:6px;vertical-align:middle;background:var(--accent)}
+  .etabs button .st.warn{background:var(--amber)} .etabs button .st.err{background:var(--red)}
+  .etabs button .st.ed{box-shadow:0 0 0 2px var(--surface-2),0 0 0 3px var(--muted)}
+  .tbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;align-items:center}
+  .tbar .sp{flex:1}
+  .tb{all:unset;cursor:pointer;font-size:13px;font-weight:700;padding:5px 10px;border-radius:8px;
+      border:1px solid var(--line-strong);color:#dfe7e4;background:var(--surface-2)}
+  .tb:hover{border-color:var(--accent)} .tb[disabled]{opacity:.35;pointer-events:none}
+  .edst{margin-top:10px;font-size:13.5px;display:flex;flex-direction:column;gap:4px}
+  .edst .ok{color:var(--accent)} .edst .wa{color:var(--amber)} .edst .er{color:var(--red)} .edst .in{color:var(--muted)}
+  .prev{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
+  .prev summary{cursor:pointer;color:var(--muted);font-weight:700;font-size:13.5px}
+  .bub{margin-top:10px;max-width:520px;white-space:pre-wrap;word-wrap:break-word;font-size:14.5px;line-height:1.5;
+       padding:12px 14px;border-radius:16px;background:#1d2a2f;border:1px solid var(--line)}
+  .bub.tg{background:#2b5278;border-radius:16px 16px 16px 4px}
+  .bub .ht{color:#6ab3f3} .bub a{color:#6ab3f3;font-weight:400}
+  .bub .card-link{display:block;margin-top:10px;padding:8px 10px;border:1px solid var(--line-strong);border-radius:10px;
+       color:var(--muted);font-size:12.5px}
+  .plabel{color:var(--muted);font-size:12.5px;margin-top:8px}
+  .tplcard summary{cursor:pointer;list-style:none} .tplcard summary::-webkit-details-marker{display:none}
   .soc{display:flex;gap:10px;flex-wrap:wrap}
   .sbtn b{display:inline-block;width:20px;text-align:center;margin-right:4px;color:var(--accent)}
   .fbg{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
@@ -141,12 +166,47 @@
   </div>
 
   <div class="card">
-    <label class="t" for="text">Текст повідомлення</label>
-    <textarea id="text" rows="7" placeholder="Привіт, {name}! Ми в StellarTech шукаємо Product Analyst…"></textarea>
-    <p class="hint dm-only"><code>{name}</code> підставить ім'я кандидата з Telegram: «Привіт, {name}!» → «Привіт, Олена!»</p>
-    <p class="hint group-only social-only threads-only hidden">Тут <code>{name}</code> прибирається автоматично (вийде «Привіт!»).</p>
-    <p class="hint social-only threads-only hidden" id="charInfo"></p>
+    <div class="row" style="justify-content:space-between">
+      <label class="t" style="margin:0" for="text">Редактор тексту</label>
+      <span class="hint" style="margin:0" id="edSaved"></span>
+    </div>
+    <p class="hint" style="margin:4px 0 12px">Пишіть у вкладці <b>Основний</b>. Версії для кожного джерела FoxyBox підготує сам за його правилами. Будь-яку версію можна доправити вручну.</p>
+    <div class="etabs" role="tablist" id="etabs">
+      <button type="button" data-ch="base">✏️ Основний</button>
+      <button type="button" data-ch="dm">👤 TG особисті</button>
+      <button type="button" data-ch="group">👥 TG групи</button>
+      <button type="button" data-ch="threads">🧵 Threads</button>
+      <button type="button" data-ch="x">𝕏 X</button>
+      <button type="button" data-ch="fb">f Facebook</button>
+    </div>
+    <div class="tbar" id="tbar">
+      <button type="button" class="tb" data-md="**" title="Жирний (лише Telegram)"><b>Ж</b></button>
+      <button type="button" class="tb" data-md="__" title="Курсив (лише Telegram)"><i>К</i></button>
+      <button type="button" class="tb" id="tbList" title="Список">• Список</button>
+      <button type="button" class="tb" id="tbName" title="Ім'я кандидата">{name}</button>
+      <span class="sp"></span>
+      <button type="button" class="tb" id="tbReset" title="Згенерувати заново з основного тексту">↻ З основного</button>
+      <button type="button" class="tb" id="tbCopy" title="Скопіювати цю версію">⧉ Копіювати</button>
+    </div>
+    <textarea id="text" rows="9" placeholder="Привіт, {name}! Ми в StellarTech шукаємо **Product Analyst**.&#10;&#10;- віддалено або Київ&#10;- B2C-застосунки в edtech&#10;&#10;Цікаво поговорити?"></textarea>
+    <div class="grid2 base-meta" style="margin-top:12px">
+      <div>
+        <label class="lbl" for="edTags">Хештеги</label>
+        <input type="text" id="edTags" class="inp" placeholder="вакансія, IT, ProductAnalyst">
+        <p class="hint">Через кому або пробіл, без #. Кожне джерело візьме стільки, скільки там доречно.</p>
+      </div>
+      <div>
+        <label class="lbl" for="edLink">Посилання на вакансію</label>
+        <input type="url" id="edLink" class="inp" placeholder="https://stellartech.com/careers/…">
+        <p class="hint">У Threads стане карткою, в інших джерелах додасться в кінці.</p>
+      </div>
+    </div>
+    <div id="edStatus" class="edst"></div>
     <div class="vac" id="vac"></div>
+    <details class="prev" id="prevBox" open>
+      <summary>Попередній перегляд</summary>
+      <div id="preview"></div>
+    </details>
   </div>
 
   <!-- Режим: особисті -->
@@ -180,21 +240,22 @@
     <p class="hint">Тільки публічні групи, де ви вже учасник. Приватні посилання (<code>t.me/+…</code>) не працюють: спершу вступіть і оберіть групу у списку вище.</p>
   </div>
 
-  <!-- Режим: Threads -->
-  <div class="card threads-only hidden">
-    <div class="row" style="justify-content:space-between">
-      <label class="t" style="margin:0">Шаблони постів</label>
+  <!-- Шаблони (для всіх режимів) -->
+  <details class="card tplcard" id="tplBox">
+    <summary class="row" style="justify-content:space-between">
+      <span class="t" style="margin:0">📁 Шаблони текстів</span>
       <span class="hint" style="margin:0" id="tplCount"></span>
-    </div>
-    <p class="hint" style="margin:4px 0 10px">Збережіть текст вакансії як шаблон, щоб наступного разу вставити його одним кліком.</p>
+    </summary>
+    <p class="hint" style="margin:8px 0 10px">Шаблон зберігає основний текст, хештеги, посилання і всі ваші ручні правки версій.</p>
     <div id="tplList"></div>
     <div class="row" style="margin-top:10px">
       <input type="text" id="tplName" class="inp" placeholder="Назва шаблону, напр. «Product Analyst · Київ»" style="flex:1;min-width:200px">
-      <button class="btn" type="button" id="tplSave">Зберегти поточний текст</button>
+      <button class="btn" type="button" id="tplSave">Зберегти як шаблон</button>
     </div>
     <div id="tplMsg"></div>
-  </div>
+  </details>
 
+  <!-- Режим: Threads -->
   <div class="card threads-only hidden">
     <label class="t">Налаштування поста</label>
     <div class="grid2">
@@ -214,9 +275,7 @@
         </select>
       </div>
     </div>
-    <label class="lbl" for="thUrl" style="margin-top:12px">Посилання на вакансію (необов'язково)</label>
-    <input type="url" id="thUrl" class="inp" placeholder="https://stellartech.com/careers/product-analyst">
-    <p class="hint">Додасться до поста як картка-посилання.</p>
+    <p class="hint" style="margin-top:10px">Текст береться з вкладки редактора <b>🧵 Threads</b>, посилання на вакансію з редактора додасться як картка. Якщо тему не вказано, FoxyBox візьме перший хештег.</p>
 
     <div class="row" style="margin-top:16px">
       <button class="btn primary" type="button" id="thGo">🧵 Опублікувати в Threads</button>
@@ -232,7 +291,7 @@
   <!-- Режим: соцмережі -->
   <div class="card social-only hidden">
     <label class="t">Опублікувати вакансію</label>
-    <p class="hint" style="margin:0 0 12px">FoxyBox відкриє вікно публікації з уже вписаним текстом. Вам лишиться перевірити й натиснути «Опублікувати». Пост виходить від вашого імені, як звичайний.</p>
+    <p class="hint" style="margin:0 0 12px">Текст береться з вкладок редактора <b>𝕏 X</b> і <b>f Facebook</b>. FoxyBox відкриє вікно публікації з уже вписаним текстом. Вам лишиться перевірити й натиснути «Опублікувати». Пост виходить від вашого імені, як звичайний.</p>
     <div class="soc">
       <button class="btn sbtn" type="button" id="toX"><b>𝕏</b> Опублікувати в X</button>
       <button class="btn sbtn" type="button" id="toFb"><b>f</b> Опублікувати у Facebook</button>
@@ -298,26 +357,265 @@
     const pub = m === "social" || m === "threads";
     $("resendRow").classList.toggle("hidden", pub);
     $("goRow").classList.toggle("hidden", pub);
-    if (pub) charInfo();
     if (m === "social") renderFb();
-    if (m === "threads") { loadTemplates(); loadHistory(); }
+    if (typeof selectChannel === "function" && cur !== "base") selectChannel(MODE_CH[m]);
+    else if (typeof renderPreview === "function") renderPreview();
+    if (m === "threads") loadHistory();
     $("go").textContent = m === "dm" ? "Запустити розсилку" : "Опублікувати в групи";
     if (m === "group" && !groups.length) loadGroups();
   }
   document.querySelectorAll(".seg button").forEach(b => b.onclick = () => !running && setMode(b.dataset.mode));
 
+  async function copy(t) {
+    try { await navigator.clipboard.writeText(t); return true; } catch (e) { return false; }
+  }
+  // ══════════════════ РЕДАКТОР ТЕКСТУ ══════════════════
+  // Основний текст пишеться з легкою розміткою: **жирний**, __курсив__, "- " список, {name}.
+  // Для кожного джерела з нього автоматично робиться своя версія.
+  const NAME_RE = /\{(?:name|ім['ʼ’]?я)\}/i;
+  const NAME = "\\{(?:name|ім['ʼ’]?я)\\}";
+  const removeName = t => t.replace(new RegExp(",[ \\t]*" + NAME, "gi"), "")
+                           .replace(new RegExp(NAME + ",?[ \\t]*", "gi"), "");
+  const stripMd = t => t.replace(/\*\*([\s\S]+?)\*\*/g, "$1").replace(/__([\s\S]+?)__/g, "$1")
+                        .replace(/~~([\s\S]+?)~~/g, "$1").replace(/`([^`\n]+)`/g, "$1")
+                        .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, "$1 ($2)");
+  const bullets = t => t.replace(/^[ \t]*[-*][ \t]+/gm, "• ");
+  const tidy = t => t.replace(/[ \t]+$/gm, "").replace(/\n{3,}/g, "\n\n").trim();
+  const cpLen = t => [...t].length;
+  // X рахує символи по-своєму: посилання = 23, кирилиця/латиниця = 1, емодзі та ін. = 2
+  function xLen(t) {
+    let n = 0;
+    t = t.replace(/https?:\/\/\S+/g, () => { n += 23; return ""; });
+    for (const ch of t) {
+      const c = ch.codePointAt(0);
+      n += (c <= 4351 || (c >= 8192 && c <= 8205) || (c >= 8208 && c <= 8223) || (c >= 8242 && c <= 8247)) ? 1 : 2;
+    }
+    return n;
+  }
+  // Скорочує текст до ліміту: абзацами, далі рядками (пункти списку), далі реченнями, далі словами
+  function fit(text, limit, measure) {
+    if (measure(text) <= limit) return [text, false];
+    const ell = "…", ok = t => measure(t.trim() + ell) <= limit;
+    let out = "";
+    outer:
+    for (const para of text.split(/\n{2,}/)) {
+      const sep = out ? "\n\n" : "";
+      if (ok(out + sep + para)) { out += sep + para; continue; }
+      let first = true;
+      for (const line of para.split("\n")) {
+        const ls = first ? sep : "\n";
+        if (ok(out + ls + line)) { out += ls + line; first = false; continue; }
+        let part = "";
+        for (const sn of line.match(/[^.!?…]+[.!?…]*\s*/g) || [line]) {
+          if (ok(out + ls + part + sn)) part += sn; else break;
+        }
+        if (!part && !out) {
+          for (const w of line.split(/(\s+)/)) { if (ok(part + w)) part += w; else break; }
+          if (!part.trim()) {                       // одне дуже довге «слово» без пробілів
+            for (const ch of line) { if (ok(part + ch)) part += ch; else break; }
+          }
+        }
+        if (part.trim()) out += ls + part.trimEnd();
+        break outer;
+      }
+      break;
+    }
+    out = out.trim();
+    return [/[.!?…]$/.test(out) ? out : out + ell, true];
+  }
+  const tagList = () => $("edTags").value.split(/[\s,;]+/).map(t => t.replace(/^#+/, "").replace(/[^\p{L}\p{N}_]/gu, ""))
+                                 .filter(Boolean);
+  const hashLine = n => tagList().slice(0, n).map(t => "#" + t).join(" ");
+  const link = () => $("edLink").value.trim();
+  const withLink = t => link() && !t.includes(link()) ? t + "\n\n" + link() : t;
+
+  const CH = {
+    dm: {label: "TG особисті", limit: 4096, md: true, measure: cpLen,
+      build(b) { return [withLink(tidy(bullets(b))), false]; },
+      check(t, b) {
+        const r = [];
+        if (!NAME_RE.test(t)) r.push(["in", "Порада: додайте {name}, щоб звернутися до кандидата на ім'я."]);
+        if (cpLen(t) > 700) r.push(["wa", "Для першого повідомлення задовго: краще до ~700 символів, інакше рідше відповідають."]);
+        return r;
+      }},
+    group: {label: "TG групи", limit: 4096, md: true, measure: cpLen,
+      build(b) { const h = hashLine(5); return [tidy(withLink(tidy(bullets(removeName(b)))) + (h ? "\n\n" + h : "")), false]; },
+      check(t) { return NAME_RE.test(t) ? [["wa", "У групі {name} не підставиться: приберіть його."]] : []; }},
+    threads: {label: "Threads", limit: 500, md: false, measure: cpLen,
+      build(b) { return fit(tidy(bullets(stripMd(removeName(b)))), 500, cpLen); },
+      check(t) {
+        const r = [];
+        if (/#[\p{L}\p{N}_]+/u.test(t)) r.push(["in", "Threads робить посиланням лише одну тему: її краще задати в полі «Тема» нижче."]);
+        if (/\*\*|__/.test(t)) r.push(["wa", "Threads не підтримує **жирний** / __курсив__: зірочки буде видно."]);
+        return r;
+      }},
+    x: {label: "X", limit: 280, md: false, measure: xLen,
+      build(b) {
+        const tail = [link(), hashLine(2)].filter(Boolean).join(" ");
+        const body = tidy(bullets(stripMd(removeName(b))));
+        const [fitted, cut] = fit(body, 280 - (tail ? xLen("\n\n" + tail) : 0), xLen);
+        return [fitted + (tail ? "\n\n" + tail : ""), cut];
+      },
+      check(t) { return /\*\*|__/.test(t) ? [["wa", "X не підтримує **жирний** / __курсив__: зірочки буде видно."]] : []; }},
+    fb: {label: "Facebook", limit: 63206, md: false, measure: cpLen,
+      build(b) { const h = hashLine(3); return [tidy(withLink(tidy(bullets(stripMd(removeName(b))))) + (h ? "\n\n" + h : "")), false]; },
+      check(t) { return /\*\*|__/.test(t) ? [["wa", "Facebook не підтримує **жирний** / __курсив__: зірочки буде видно."]] : []; }},
+  };
+  const CHANNELS = Object.keys(CH);
+  const MODE_CH = {dm: "dm", group: "group", threads: "threads", social: "x"};
+
+  // стан: основний текст + версії (auto або змінені вручну)
+  let draft = {base: "", tags: "", link: "", versions: {}};
+  let cur = "base";
+  try { Object.assign(draft, JSON.parse(localStorage.getItem("foxy_draft") || "{}")); } catch (e) {}
+  CHANNELS.forEach(c => { draft.versions[c] = draft.versions[c] || {text: "", edited: false, cut: false}; });
+
+  function rebuild() {
+    CHANNELS.forEach(c => {
+      const v = draft.versions[c];
+      if (v.edited) return;
+      const [t, cut] = draft.base.trim() ? CH[c].build(draft.base) : ["", false];
+      v.text = t; v.cut = cut;
+    });
+  }
+  function getText(c) { return c === "base" ? draft.base : (draft.versions[c] || {}).text || ""; }
+
+  let saveT;
+  function persist() {
+    clearTimeout(saveT);
+    saveT = setTimeout(() => {
+      try { localStorage.setItem("foxy_draft", JSON.stringify(draft)); $("edSaved").textContent = "Чернетку збережено"; } catch (e) {}
+    }, 400);
+  }
+
+  function channelState(c) {
+    const t = getText(c), d = CH[c], n = d.measure(t);
+    if (!t.trim()) return "warn";
+    if (n > d.limit) return "err";
+    return (draft.versions[c].cut || d.check(t, draft.base).some(([k]) => k === "wa")) ? "warn" : "ok";
+  }
+  function renderTabs() {
+    document.querySelectorAll("#etabs button").forEach(b => {
+      const c = b.dataset.ch;
+      b.setAttribute("aria-selected", c === cur);
+      b.querySelector(".st")?.remove();
+      if (c !== "base" && draft.base.trim()) {
+        const i = document.createElement("i");
+        i.className = "st " + channelState(c) + (draft.versions[c].edited ? " ed" : "");
+        i.title = draft.versions[c].edited ? "змінено вручну" : "";
+        b.appendChild(i);
+      }
+    });
+  }
+  function renderStatus() {
+    const box = $("edStatus"), t = getText(cur);
+    if (cur === "base") {
+      box.innerHTML = draft.base.trim()
+        ? `<span class="in">Символів: ${cpLen(draft.base)}. Відкрийте вкладку джерела, щоб побачити й доправити його версію.</span>`
+        : `<span class="in">Розмітка: <code>**жирний**</code>, <code>__курсив__</code>, рядки з <code>- </code> стануть списком, <code>{name}</code> ім'я кандидата.</span>`;
+      return;
+    }
+    const d = CH[cur], v = draft.versions[cur], n = d.measure(t), lines = [];
+    const cnt = `Символів: ${n} / ${d.limit}` + (cur === "x" ? " (за правилами X: посилання = 23, емодзі = 2)" : "");
+    lines.push([n > d.limit ? "er" : "ok", n > d.limit ? `${cnt} · задовго на ${n - d.limit}` : cnt]);
+    if (v.cut && !v.edited) lines.push(["wa", "Текст автоматично скорочено, щоб влізти в ліміт. Перевірте, чи нічого важливого не загубилось."]);
+    if (v.edited) lines.push(["in", "Змінено вручну: зміни в основному тексті сюди вже не підтягуються. «↻ З основного» поверне автоверсію."]);
+    d.check(t, draft.base).forEach(l => lines.push(l));
+    box.innerHTML = lines.map(([k, m]) => `<span class="${k}">${esc(m).replace(/\{name\}/g, "<code>{name}</code>")}</span>`).join("");
+  }
+  // Попередній перегляд: Telegram з форматуванням, інші як простий текст
+  function mdToHtml(t) {
+    return esc(t).replace(/\*\*([\s\S]+?)\*\*/g, "<b>$1</b>").replace(/__([\s\S]+?)__/g, "<i>$1</i>")
+      .replace(/~~([\s\S]+?)~~/g, "<s>$1</s>").replace(/`([^`\n]+)`/g, "<code>$1</code>")
+      .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a>$1</a>');
+  }
+  const deco = h => h.replace(/(https?:\/\/[^\s<]+)/g, "<a>$1</a>").replace(/(^|\s)(#[\p{L}\p{N}_]+)/gu, '$1<span class="ht">$2</span>');
+  function renderPreview() {
+    const c = cur === "base" ? (MODE_CH[mode] || "dm") : cur, t = getText(c);
+    if (!t.trim()) { $("preview").innerHTML = `<div class="plabel">Почніть писати в основному тексті.</div>`; return; }
+    let html = CH[c].md ? deco(mdToHtml(t.replace(new RegExp(NAME, "gi"), "Олена"))) : deco(esc(t));
+    if (c === "threads" && link()) html += `<span class="card-link">🔗 ${esc(link())}</span>`;
+    $("preview").innerHTML = `<div class="plabel">Так виглядатиме у: <b>${CH[c].label}</b>${c === "dm" ? " (ім'я для прикладу)" : ""}</div>
+      <div class="bub ${c === "dm" || c === "group" ? "tg" : ""}">${html}</div>`;
+  }
+  function renderEditor() {
+    const ta = $("text");
+    if (document.activeElement !== ta || ta.dataset.ch !== cur) ta.value = getText(cur);
+    ta.dataset.ch = cur;
+    document.querySelectorAll(".base-meta").forEach(el => el.classList.toggle("hidden", cur !== "base"));
+    $("tbReset").disabled = cur === "base";
+    const md = cur === "base" || (CH[cur] && CH[cur].md);
+    document.querySelectorAll("#tbar [data-md]").forEach(b => b.disabled = !md);
+    $("tbName").disabled = !(cur === "base" || cur === "dm");
+    renderTabs(); renderStatus(); renderPreview();
+  }
+  function selectChannel(c) { cur = c; renderEditor(); }
+  document.querySelectorAll("#etabs button").forEach(b => b.onclick = () => selectChannel(b.dataset.ch));
+
+  function onChange() {
+    const ta = $("text");
+    if (cur === "base") { draft.base = ta.value; rebuild(); vacancyPreview(); }
+    else { draft.versions[cur].text = ta.value; draft.versions[cur].edited = true; }
+    persist(); renderTabs(); renderStatus(); renderPreview();
+  }
+  $("text").addEventListener("input", onChange);
+  ["edTags", "edLink"].forEach(id => $(id).addEventListener("input", () => {
+    draft.tags = $("edTags").value; draft.link = $("edLink").value;
+    rebuild(); persist(); renderEditor();
+  }));
+  // панель інструментів
+  function wrapSel(before, after = before) {
+    const ta = $("text"), {selectionStart: a, selectionEnd: b, value: v} = ta;
+    const sel = v.slice(a, b) || "текст";
+    ta.value = v.slice(0, a) + before + sel + after + v.slice(b);
+    ta.focus(); ta.setSelectionRange(a + before.length, a + before.length + sel.length);
+    onChange();
+  }
+  document.querySelectorAll("#tbar [data-md]").forEach(b => b.onclick = () => wrapSel(b.dataset.md));
+  $("tbName").onclick = () => {
+    const ta = $("text"), a = ta.selectionStart;
+    ta.value = ta.value.slice(0, a) + "{name}" + ta.value.slice(ta.selectionEnd);
+    ta.focus(); ta.setSelectionRange(a + 6, a + 6); onChange();
+  };
+  $("tbList").onclick = () => {
+    const ta = $("text"), v = ta.value;
+    const a = v.lastIndexOf("\n", ta.selectionStart - 1) + 1;
+    let b = v.indexOf("\n", ta.selectionEnd); if (b < 0) b = v.length;
+    const mark = CH[cur] && !CH[cur].md ? "• " : "- ";
+    const block = v.slice(a, b).split("\n").map(l => /^\s*([-*•])\s/.test(l) ? l.replace(/^\s*[-*•]\s/, "") : mark + l).join("\n");
+    ta.value = v.slice(0, a) + block + v.slice(b); ta.focus(); onChange();
+  };
+  $("tbReset").onclick = () => {
+    if (cur === "base") return;
+    if (draft.versions[cur].edited && !confirm("Ваші ручні правки цієї версії зникнуть. Згенерувати заново з основного тексту?")) return;
+    draft.versions[cur].edited = false; rebuild(); persist(); renderEditor();
+  };
+  $("tbCopy").onclick = async () => {
+    const ok = await copy(getText(cur));
+    $("edSaved").textContent = ok ? "Скопійовано" : "Не вдалося скопіювати";
+  };
+  function loadDraft(d) {
+    draft = {base: d.base || "", tags: d.tags || "", link: d.link || "", versions: {}};
+    CHANNELS.forEach(c => {
+      const v = (d.versions || {})[c];
+      draft.versions[c] = v && v.edited ? {text: v.text, edited: true, cut: false} : {text: "", edited: false, cut: false};
+    });
+    $("edTags").value = draft.tags; $("edLink").value = draft.link;
+    rebuild(); persist(); renderEditor(); vacancyPreview();
+  }
+
   // ── назва вакансії з тексту ──
-  let t;
-  $("text").addEventListener("input", () => {
-    clearTimeout(t);
-    t = setTimeout(async () => {
+  let vt;
+  function vacancyPreview() {
+    clearTimeout(vt);
+    vt = setTimeout(async () => {
       try {
         const r = await (await fetch("/api/preview", {method: "POST", headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({text: $("text").value})})).json();
+          body: JSON.stringify({text: draft.base})})).json();
         $("vac").innerHTML = r.vacancy ? `Вакансія в базі: <b>${esc(r.vacancy)}</b>` : "";
       } catch (e) {}
     }, 400);
-  });
+  }
   const parseList = v => v.split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
   $("users").addEventListener("input", () => {
     const n = parseList($("users").value).length;
@@ -372,12 +670,13 @@
 
   $("go").onclick = async () => {
     if (running) return;
-    const text = $("text").value;
+    const text = getText(mode === "dm" ? "dm" : "group");
     const body = {mode, text, resend: $("resend").checked};
     let n;
     if (mode === "dm") { body.usernames = parseList($("users").value); n = body.usernames.length; }
     else { body.groups = [...selected]; body.links = $("links").value; n = body.groups.length + parseList(body.links).length; }
-    if (!text.trim()) return alert("Впишіть текст повідомлення.");
+    if (!text.trim()) return alert("Впишіть текст у редакторі.");
+    if (cpLen(text) > 4096) return alert("Текст довший за 4096 символів: Telegram його не прийме.");
     if (!n) return alert(mode === "dm" ? "Додайте хоча б один @username." : "Оберіть хоча б одну групу.");
     const what = mode === "dm" ? `${n} кандидат(ам) в особисті` : `у ${n} груп(и)`;
     if (!confirm(`Надіслати ${what}?`)) return;
@@ -434,34 +733,19 @@
   };
 
   // ── соцмережі ──
-  // {name} для публічного поста не має сенсу: прибираємо, як і для груп
-  const NAME = "\\{(?:name|ім['ʼ’]?я)\\}";
-  const publicText = () => $("text").value
-    .replace(new RegExp(",[ \\t]*" + NAME, "gi"), "")
-    .replace(new RegExp(NAME + ",?[ \\t]*", "gi"), "").trim();
-  function charInfo() {
-    const n = [...publicText()].length;
-    const warn = [];
-    if (mode === "social" && n > 280) warn.push("для X довше 280 символів (без X Premium обріжеться)");
-    if (mode === "threads" && n > 500) warn.push("Threads дозволяє до 500 символів: скоротіть текст");
-    $("charInfo").innerHTML = n ? `Символів: <b>${n}</b>` + (warn.length ? ` · <span style="color:var(--amber)">${warn.join("; ")}</span>` : "") : "";
-  }
-  $("text").addEventListener("input", () => { if (mode === "social" || mode === "threads") charInfo(); });
   function socMsg(cls, text) { $("socMsg").innerHTML = text ? `<div class="alert ${cls}">${esc(text)}</div>` : ""; }
-  function needText() {
-    const t = publicText();
-    if (!t) { socMsg("err", "Спершу впишіть текст повідомлення."); return null; }
+  function needText(c) {
+    const t = getText(c).trim();
+    if (!t) { socMsg("err", "Спершу впишіть текст у редакторі."); return null; }
+    if (CH[c].measure(t) > CH[c].limit) { socMsg("err", `Версія для ${CH[c].label} задовга. Доправте її у вкладці редактора.`); selectChannel(c); return null; }
     socMsg("", ""); return t;
   }
-  async function copy(t) {
-    try { await navigator.clipboard.writeText(t); return true; } catch (e) { return false; }
-  }
   $("toX").onclick = () => {
-    const t = needText(); if (!t) return;
+    const t = needText("x"); if (!t) return;
     window.open("https://x.com/intent/post?text=" + encodeURIComponent(t), "_blank", "noopener");
   };
   $("toFb").onclick = async () => {
-    const t = needText(); if (!t) return;
+    const t = needText("fb"); if (!t) return;
     const ok = await copy(t);
     window.open("https://www.facebook.com/", "_blank", "noopener");
     socMsg("warn", ok ? "Текст скопійовано. У Facebook клацніть «Що у вас нового?» і вставте Ctrl + V."
@@ -477,7 +761,7 @@
     $("fbList").innerHTML = urls.map((u, i) => `<div class="fbg" id="fb${i}"><span title="${esc(u)}">${esc(u.replace(/^https?:\/\/(www\.)?/, ""))}</span>
       <button class="btn" type="button" data-i="${i}">Скопіювати й відкрити</button></div>`).join("");
     $("fbList").querySelectorAll("button").forEach(b => b.onclick = async () => {
-      const t = needText(); if (!t) return;
+      const t = needText("fb"); if (!t) return;
       const ok = await copy(t);
       window.open(urls[+b.dataset.i], "_blank", "noopener");
       $("fb" + b.dataset.i).classList.add("done");
@@ -508,15 +792,17 @@
     templates = list;
     $("tplCount").textContent = list.length ? `Збережено: ${list.length}` : "";
     $("tplList").innerHTML = list.length ? list.map(t => `
-      <div class="tpl"><div class="nm">${esc(t.name)}<small>${esc(t.text.slice(0, 90))}${t.tag ? " · тема: " + esc(t.tag) : ""}</small></div>
+      <div class="tpl"><div class="nm">${esc(t.name)}<small>${esc(t.text.slice(0, 90))}</small></div>
         <button class="btn sm" type="button" data-use="${t.id}">Вставити</button>
         <button class="btn sm ghost" type="button" data-del="${t.id}" title="Видалити">✕</button></div>`).join("")
       : `<div class="empty" style="padding:10px">Шаблонів поки нема.</div>`;
     $("tplList").querySelectorAll("[data-use]").forEach(b => b.onclick = () => {
       const t = templates.find(x => x.id === b.dataset.use); if (!t) return;
-      $("text").value = t.text; $("thTag").value = t.tag || ""; $("thUrl").value = t.url || "";
-      $("thReply").value = t.reply_control || "everyone"; $("tplName").value = t.name;
-      $("text").dispatchEvent(new Event("input")); box("tplMsg", "", "");
+      const d = t.draft || {base: t.text, link: t.url || ""};
+      if (!d.base) d.base = t.text;
+      loadDraft(d);
+      $("thTag").value = t.tag || ""; $("thReply").value = t.reply_control || "everyone"; $("tplName").value = t.name;
+      selectChannel("base"); box("tplMsg", "warn", `Шаблон «${t.name}» вставлено.`);
     });
     $("tplList").querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
       const t = templates.find(x => x.id === b.dataset.del);
@@ -525,24 +811,24 @@
     });
   }
   $("tplSave").onclick = async () => {
-    const name = $("tplName").value.trim(), text = $("text").value.trim();
-    if (!text) return box("tplMsg", "err", "Спершу впишіть текст повідомлення.");
+    const name = $("tplName").value.trim(), text = draft.base.trim();
+    if (!text) return box("tplMsg", "err", "Спершу впишіть основний текст у редакторі.");
     if (!name) return box("tplMsg", "err", "Дайте шаблону назву.");
     try {
       renderTemplates((await api("/api/templates", {action: "save", name, text, tag: cleanTag($("thTag").value),
-        url: $("thUrl").value.trim(), reply_control: $("thReply").value})).templates);
+        url: link(), reply_control: $("thReply").value, draft})).templates);
       box("tplMsg", "warn", `Шаблон «${name}» збережено.`);
     } catch (e) { box("tplMsg", "err", e.message); }
   };
   $("thTag").addEventListener("blur", () => { $("thTag").value = cleanTag($("thTag").value); });
 
   $("thGo").onclick = () => {
-    const text = publicText();
-    if (!text) return box("thMsg", "err", "Спершу впишіть текст повідомлення.");
-    if ([...text].length > 500) return box("thMsg", "err", "Текст довший за 500 символів: Threads його не прийме. Скоротіть.");
-    const url = $("thUrl").value.trim();
-    if (url && !/^https?:\/\/\S+\.\S+/i.test(url)) return box("thMsg", "err", "Посилання має починатися з https://");
-    const tag = cleanTag($("thTag").value), rc = $("thReply").value;
+    const text = getText("threads").trim();
+    if (!text) return box("thMsg", "err", "Спершу впишіть текст у редакторі.");
+    if (cpLen(text) > 500) { selectChannel("threads"); return box("thMsg", "err", "Версія для Threads довша за 500 символів. Доправте її у вкладці редактора 🧵 Threads."); }
+    const url = link();
+    if (url && !/^https?:\/\/\S+\.\S+/i.test(url)) return box("thMsg", "err", "Посилання на вакансію має починатися з https://");
+    const tag = cleanTag($("thTag").value) || cleanTag(tagList()[0] || ""), rc = $("thReply").value;
     const q = new URLSearchParams({text});
     if (tag) q.set("tag", tag);
     if (url) q.set("url", url);
@@ -567,7 +853,12 @@
       : `<div class="sk" style="border:none">Ще нічого не опубліковано.</div>`;
   }
 
+  $("edTags").value = draft.tags || ""; $("edLink").value = draft.link || "";
+  rebuild();
   setMode(mode);
+  selectChannel("base");
+  if (draft.base.trim()) vacancyPreview();
+  loadTemplates();
   loadStats();
 })();
 </script>

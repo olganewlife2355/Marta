@@ -706,6 +706,20 @@ def _clip(v, n):
     return str(v or "").strip()[:n]
 
 
+EDITOR_CHANNELS = ("dm", "group", "threads", "x", "fb")
+
+
+def _clean_draft(d, base: str) -> dict:
+    """Чернетка редактора: основний текст, хештеги, посилання і лише ручні правки версій."""
+    d = d if isinstance(d, dict) else {}
+    versions = {}
+    for ch, v in (d.get("versions") or {}).items():
+        if ch in EDITOR_CHANNELS and isinstance(v, dict) and v.get("edited"):
+            versions[ch] = {"text": _clip(v.get("text"), 4100), "edited": True}
+    return {"base": _clip(d.get("base"), 4000) or base, "tags": _clip(d.get("tags"), 300),
+            "link": _clip(d.get("link"), 500), "versions": versions}
+
+
 def templates_api(data: dict) -> dict:
     """save: {name, text, tag, url, reply_control} · delete: {id}"""
     action = data.get("action")
@@ -721,6 +735,7 @@ def templates_api(data: dict) -> dict:
             item = {"name": name, "text": text, "tag": clean_tag(data.get("tag")),
                     "url": _clip(data.get("url"), 500),
                     "reply_control": rc if rc in REPLY_CONTROLS else "everyone",
+                    "draft": _clean_draft(data.get("draft"), text),
                     "updated": now_iso()}
             for t in tpl:                      # та сама назва → оновлюємо
                 if t["name"].lower() == name.lower():
