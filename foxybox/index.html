@@ -68,6 +68,19 @@
   .btn.primary:hover{background:var(--accent-h)}
   .btn[disabled]{opacity:.5;pointer-events:none}
 
+  .inp{width:100%;background:var(--surface-2);color:var(--text);border:1px solid var(--line-strong);
+       border-radius:12px;padding:10px 13px;font:inherit;font-size:15px}
+  .inp:focus{outline:none;border-color:var(--accent)}
+  select.inp{appearance:none;cursor:pointer}
+  .lbl{display:block;font-weight:700;font-size:14px;margin:0 0 6px;color:#dfe7e4}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+  @media(max-width:620px){.grid2{grid-template-columns:1fr}}
+  .tpl{display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)}
+  .tpl:last-child{border-bottom:none}
+  .tpl .nm{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tpl .nm small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+  .btn.sm{padding:7px 12px;font-size:13.5px}
+  .btn.ghost{background:transparent}
   .soc{display:flex;gap:10px;flex-wrap:wrap}
   .sbtn b{display:inline-block;width:20px;text-align:center;margin-right:4px;color:var(--accent)}
   .fbg{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
@@ -123,15 +136,16 @@
   <div class="seg" role="group" aria-label="Куди надсилати">
     <button type="button" data-mode="dm" aria-pressed="true">👤 Особисті</button>
     <button type="button" data-mode="group" aria-pressed="false">👥 Групи</button>
-    <button type="button" data-mode="social" aria-pressed="false">🌐 Соцмережі</button>
+    <button type="button" data-mode="threads" aria-pressed="false">🧵 Threads</button>
+    <button type="button" data-mode="social" aria-pressed="false">🌐 X / Facebook</button>
   </div>
 
   <div class="card">
     <label class="t" for="text">Текст повідомлення</label>
     <textarea id="text" rows="7" placeholder="Привіт, {name}! Ми в StellarTech шукаємо Product Analyst…"></textarea>
     <p class="hint dm-only"><code>{name}</code> підставить ім'я кандидата з Telegram: «Привіт, {name}!» → «Привіт, Олена!»</p>
-    <p class="hint group-only social-only hidden">Тут <code>{name}</code> прибирається автоматично (вийде «Привіт!»).</p>
-    <p class="hint social-only hidden" id="charInfo"></p>
+    <p class="hint group-only social-only threads-only hidden">Тут <code>{name}</code> прибирається автоматично (вийде «Привіт!»).</p>
+    <p class="hint social-only threads-only hidden" id="charInfo"></p>
     <div class="vac" id="vac"></div>
   </div>
 
@@ -166,13 +180,61 @@
     <p class="hint">Тільки публічні групи, де ви вже учасник. Приватні посилання (<code>t.me/+…</code>) не працюють: спершу вступіть і оберіть групу у списку вище.</p>
   </div>
 
+  <!-- Режим: Threads -->
+  <div class="card threads-only hidden">
+    <div class="row" style="justify-content:space-between">
+      <label class="t" style="margin:0">Шаблони постів</label>
+      <span class="hint" style="margin:0" id="tplCount"></span>
+    </div>
+    <p class="hint" style="margin:4px 0 10px">Збережіть текст вакансії як шаблон, щоб наступного разу вставити його одним кліком.</p>
+    <div id="tplList"></div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="tplName" class="inp" placeholder="Назва шаблону, напр. «Product Analyst · Київ»" style="flex:1;min-width:200px">
+      <button class="btn" type="button" id="tplSave">Зберегти поточний текст</button>
+    </div>
+    <div id="tplMsg"></div>
+  </div>
+
+  <div class="card threads-only hidden">
+    <label class="t">Налаштування поста</label>
+    <div class="grid2">
+      <div>
+        <label class="lbl" for="thTag">Тема (topic tag)</label>
+        <input type="text" id="thTag" class="inp" list="thTags" maxlength="50" placeholder="напр. Вакансії">
+        <datalist id="thTags"><option value="Вакансії"><option value="IT вакансії"><option value="Робота"><option value="Hiring"><option value="Jobs"><option value="Рекрутинг"></datalist>
+        <p class="hint">Одна тема на пост, до 50 символів. Без крапок і «&amp;».</p>
+      </div>
+      <div>
+        <label class="lbl" for="thReply">Хто може відповідати</label>
+        <select id="thReply" class="inp">
+          <option value="everyone">Усі</option>
+          <option value="followers_only">Лише підписники</option>
+          <option value="accounts_you_follow">Лише ті, на кого ви підписані</option>
+          <option value="mentioned_only">Лише згадані</option>
+        </select>
+      </div>
+    </div>
+    <label class="lbl" for="thUrl" style="margin-top:12px">Посилання на вакансію (необов'язково)</label>
+    <input type="url" id="thUrl" class="inp" placeholder="https://stellartech.com/careers/product-analyst">
+    <p class="hint">Додасться до поста як картка-посилання.</p>
+
+    <div class="row" style="margin-top:16px">
+      <button class="btn primary" type="button" id="thGo">🧵 Опублікувати в Threads</button>
+    </div>
+    <div id="thMsg"></div>
+  </div>
+
+  <div class="card threads-only hidden">
+    <label class="t">Історія публікацій у Threads</label>
+    <div id="thHist" class="log"></div>
+  </div>
+
   <!-- Режим: соцмережі -->
   <div class="card social-only hidden">
     <label class="t">Опублікувати вакансію</label>
     <p class="hint" style="margin:0 0 12px">FoxyBox відкриє вікно публікації з уже вписаним текстом. Вам лишиться перевірити й натиснути «Опублікувати». Пост виходить від вашого імені, як звичайний.</p>
     <div class="soc">
       <button class="btn sbtn" type="button" id="toX"><b>𝕏</b> Опублікувати в X</button>
-      <button class="btn sbtn" type="button" id="toThreads"><b>@</b> Опублікувати в Threads</button>
       <button class="btn sbtn" type="button" id="toFb"><b>f</b> Опублікувати у Facebook</button>
     </div>
     <div id="socMsg"></div>
@@ -230,15 +292,15 @@
     mode = m;
     try { localStorage.setItem("foxy_mode", m); } catch (e) {}
     document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === m));
-    document.querySelectorAll(".dm-only, .group-only, .social-only").forEach(el => {
-      const show = (m === "dm" && el.classList.contains("dm-only")) ||
-                   (m === "group" && el.classList.contains("group-only")) ||
-                   (m === "social" && el.classList.contains("social-only"));
-      el.classList.toggle("hidden", !show);
+    document.querySelectorAll(".dm-only, .group-only, .social-only, .threads-only").forEach(el => {
+      el.classList.toggle("hidden", !el.classList.contains(m + "-only"));
     });
-    $("resendRow").classList.toggle("hidden", m === "social");
-    $("goRow").classList.toggle("hidden", m === "social");
-    if (m === "social") { renderFb(); charInfo(); }
+    const pub = m === "social" || m === "threads";
+    $("resendRow").classList.toggle("hidden", pub);
+    $("goRow").classList.toggle("hidden", pub);
+    if (pub) charInfo();
+    if (m === "social") renderFb();
+    if (m === "threads") { loadTemplates(); loadHistory(); }
     $("go").textContent = m === "dm" ? "Запустити розсилку" : "Опублікувати в групи";
     if (m === "group" && !groups.length) loadGroups();
   }
@@ -380,11 +442,11 @@
   function charInfo() {
     const n = [...publicText()].length;
     const warn = [];
-    if (n > 280) warn.push("для X довше 280 символів (без X Premium обріжеться)");
-    if (n > 500) warn.push("для Threads довше 500 символів");
+    if (mode === "social" && n > 280) warn.push("для X довше 280 символів (без X Premium обріжеться)");
+    if (mode === "threads" && n > 500) warn.push("Threads дозволяє до 500 символів: скоротіть текст");
     $("charInfo").innerHTML = n ? `Символів: <b>${n}</b>` + (warn.length ? ` · <span style="color:var(--amber)">${warn.join("; ")}</span>` : "") : "";
   }
-  $("text").addEventListener("input", () => { if (mode === "social") charInfo(); });
+  $("text").addEventListener("input", () => { if (mode === "social" || mode === "threads") charInfo(); });
   function socMsg(cls, text) { $("socMsg").innerHTML = text ? `<div class="alert ${cls}">${esc(text)}</div>` : ""; }
   function needText() {
     const t = publicText();
@@ -397,10 +459,6 @@
   $("toX").onclick = () => {
     const t = needText(); if (!t) return;
     window.open("https://x.com/intent/post?text=" + encodeURIComponent(t), "_blank", "noopener");
-  };
-  $("toThreads").onclick = () => {
-    const t = needText(); if (!t) return;
-    window.open("https://www.threads.com/intent/post?text=" + encodeURIComponent(t), "_blank", "noopener");
   };
   $("toFb").onclick = async () => {
     const t = needText(); if (!t) return;
@@ -431,6 +489,83 @@
     try { localStorage.setItem(fbKey, $("fbGroups").value); } catch (e) {}
     renderFb();
   });
+
+  // ── Threads ──
+  const api = async (url, body) => {
+    const r = await fetch(url, body ? {method: "POST", headers: {"Content-Type": "application/json"},
+                                       body: JSON.stringify(body)} : undefined);
+    const j = await r.json(); if (j.error) throw new Error(j.error); return j;
+  };
+  const RC = {everyone: "Усі", followers_only: "Підписники", accounts_you_follow: "На кого ви підписані", mentioned_only: "Згадані"};
+  const cleanTag = t => t.replace(/[\r\n\t.&]/g, " ").replace(/^\s*#/, "").replace(/\s+/g, " ").trim().slice(0, 50);
+  let templates = [], lastPost = null;
+  function box(id, cls, text) { $(id).innerHTML = text ? `<div class="alert ${cls}">${esc(text)}</div>` : ""; }
+
+  async function loadTemplates() {
+    try { renderTemplates((await api("/api/templates")).templates); } catch (e) { box("tplMsg", "err", e.message); }
+  }
+  function renderTemplates(list) {
+    templates = list;
+    $("tplCount").textContent = list.length ? `Збережено: ${list.length}` : "";
+    $("tplList").innerHTML = list.length ? list.map(t => `
+      <div class="tpl"><div class="nm">${esc(t.name)}<small>${esc(t.text.slice(0, 90))}${t.tag ? " · тема: " + esc(t.tag) : ""}</small></div>
+        <button class="btn sm" type="button" data-use="${t.id}">Вставити</button>
+        <button class="btn sm ghost" type="button" data-del="${t.id}" title="Видалити">✕</button></div>`).join("")
+      : `<div class="empty" style="padding:10px">Шаблонів поки нема.</div>`;
+    $("tplList").querySelectorAll("[data-use]").forEach(b => b.onclick = () => {
+      const t = templates.find(x => x.id === b.dataset.use); if (!t) return;
+      $("text").value = t.text; $("thTag").value = t.tag || ""; $("thUrl").value = t.url || "";
+      $("thReply").value = t.reply_control || "everyone"; $("tplName").value = t.name;
+      $("text").dispatchEvent(new Event("input")); box("tplMsg", "", "");
+    });
+    $("tplList").querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+      const t = templates.find(x => x.id === b.dataset.del);
+      if (!t || !confirm(`Видалити шаблон «${t.name}»?`)) return;
+      renderTemplates((await api("/api/templates", {action: "delete", id: t.id})).templates);
+    });
+  }
+  $("tplSave").onclick = async () => {
+    const name = $("tplName").value.trim(), text = $("text").value.trim();
+    if (!text) return box("tplMsg", "err", "Спершу впишіть текст повідомлення.");
+    if (!name) return box("tplMsg", "err", "Дайте шаблону назву.");
+    try {
+      renderTemplates((await api("/api/templates", {action: "save", name, text, tag: cleanTag($("thTag").value),
+        url: $("thUrl").value.trim(), reply_control: $("thReply").value})).templates);
+      box("tplMsg", "warn", `Шаблон «${name}» збережено.`);
+    } catch (e) { box("tplMsg", "err", e.message); }
+  };
+  $("thTag").addEventListener("blur", () => { $("thTag").value = cleanTag($("thTag").value); });
+
+  $("thGo").onclick = () => {
+    const text = publicText();
+    if (!text) return box("thMsg", "err", "Спершу впишіть текст повідомлення.");
+    if ([...text].length > 500) return box("thMsg", "err", "Текст довший за 500 символів: Threads його не прийме. Скоротіть.");
+    const url = $("thUrl").value.trim();
+    if (url && !/^https?:\/\/\S+\.\S+/i.test(url)) return box("thMsg", "err", "Посилання має починатися з https://");
+    const tag = cleanTag($("thTag").value), rc = $("thReply").value;
+    const q = new URLSearchParams({text});
+    if (tag) q.set("tag", tag);
+    if (url) q.set("url", url);
+    if (rc !== "everyone") q.set("reply_control", rc);
+    window.open("https://www.threads.com/intent/post?" + q.toString().replace(/\+/g, "%20"), "_blank", "noopener");
+    lastPost = {network: "threads", text, tag, url};
+    $("thMsg").innerHTML = `<div class="alert warn">Відкрито вікно Threads. Опублікували?
+      <div class="row" style="margin-top:8px"><button class="btn sm" type="button" id="thDone">Так, записати в історію</button>
+      <button class="btn sm ghost" type="button" id="thNo">Ні</button></div></div>`;
+    $("thDone").onclick = async () => {
+      try { renderHistory((await api("/api/social_log", lastPost)).posts); box("thMsg", "warn", "Записано в історію."); loadStats(); }
+      catch (e) { box("thMsg", "err", e.message); }
+    };
+    $("thNo").onclick = () => box("thMsg", "", "");
+  };
+
+  async function loadHistory() { try { renderHistory((await api("/api/social_log")).posts); } catch (e) {} }
+  function renderHistory(posts) {
+    const th = posts.filter(p => p.network === "threads");
+    $("thHist").innerHTML = th.length ? th.slice(0, 15).map(p => `<div><span class="sk">${esc(p.date.slice(0, 16).replace("T", " "))}</span> ·
+      <b>${esc(p.vacancy || p.text.slice(0, 60))}</b>${p.tag ? ` <span class="sk">· ${esc(p.tag)}</span>` : ""}</div>`).join("")
+      : `<div class="sk" style="border:none">Ще нічого не опубліковано.</div>`;
+  }
 
   setMode(mode);
   loadStats();

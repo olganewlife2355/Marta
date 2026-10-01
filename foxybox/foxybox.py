@@ -109,7 +109,8 @@ _db_lock = threading.Lock()
 
 def _default_db() -> dict:
     return {"contacts": {}, "daily_sent": {}, "total_sent": 0,
-            "groups": {}, "daily_groups": {}}
+            "groups": {}, "daily_groups": {},
+            "templates": [], "social_posts": []}
 
 
 def load_db() -> dict:
@@ -689,6 +690,73 @@ async def run_group_campaign(text: str, refs: list, q: Queue, resend: bool = Fal
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+#  Threads: шаблони постів та історія публікацій
+# ─────────────────────────────────────────────────────────────────────────────
+THREADS_TAG_MAX = 50
+REPLY_CONTROLS = ("everyone", "accounts_you_follow", "mentioned_only", "followers_only")
+
+
+def clean_tag(tag: str) -> str:
+    """Тема Threads: без переносів, табів, крапок і &, до 50 символів."""
+    tag = re.sub(r"[\r\n\t.&]", " ", str(tag or "")).strip().lstrip("#").strip()
+    return re.sub(r"\s+", " ", tag)[:THREADS_TAG_MAX]
+
+
+def _clip(v, n):
+    return str(v or "").strip()[:n]
+
+
+def templates_api(data: dict) -> dict:
+    """save: {name, text, tag, url, reply_control} · delete: {id}"""
+    action = data.get("action")
+    with _db_lock:
+        db = load_db()
+        tpl = db["templates"]
+        if action == "save":
+            name = _clip(data.get("name"), 80)
+            text = _clip(data.get("text"), 4000)
+            if not name or not text:
+                return {"error": "Потрібні назва шаблону і текст."}
+            rc = data.get("reply_control")
+            item = {"name": name, "text": text, "tag": clean_tag(data.get("tag")),
+                    "url": _clip(data.get("url"), 500),
+                    "reply_control": rc if rc in REPLY_CONTROLS else "everyone",
+                    "updated": now_iso()}
+            for t in tpl:                      # та сама назва → оновлюємо
+                if t["name"].lower() == name.lower():
+                    t.update(item); break
+            else:
+                item["id"] = f"t{int(time.time() * 1000)}"
+                tpl.append(item)
+            save_db(db)
+        elif action == "delete":
+            db["templates"] = [t for t in tpl if t.get("id") != data.get("id")]
+            save_db(db)
+        elif action is not None:
+            return {"error": "unknown action"}
+        return {"templates": sorted(db["templates"], key=lambda t: t["name"].lower())}
+
+
+def social_log_api(data=None) -> dict:
+    """Без data — повертає історію; з data — записує публікацію."""
+    with _db_lock:
+        db = load_db()
+        if data is not None:
+            net = data.get("network")
+            if net not in ("threads", "x", "facebook"):
+                return {"error": "unknown network"}
+            text = _clip(data.get("text"), 4000)
+            db["social_posts"].append({
+                "network": net, "date": now_iso(), "text": text,
+                "vacancy": extract_vacancy(text), "tag": clean_tag(data.get("tag")),
+                "url": _clip(data.get("url"), 500),
+            })
+            db["social_posts"] = db["social_posts"][-500:]
+            save_db(db)
+        return {"posts": list(reversed(db["social_posts"]))[:50]}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 #  HTTP-сервер
 # ─────────────────────────────────────────────────────────────────────────────
 class Handler(BaseHTTPRequestHandler):
@@ -763,6 +831,10 @@ class Handler(BaseHTTPRequestHandler):
             except Exception as e:
                 log.exception("list_groups")
                 self._json({"error": f"Не вдалося завантажити групи: {e}"}, 500)
+        elif path == "/api/templates":
+            self._json(templates_api({}))
+        elif path == "/api/social_log":
+            self._json(social_log_api())
         elif path == "/db":
             self._send(200, render_db_page().encode("utf-8"),
                        "text/html; charset=utf-8")
@@ -782,6 +854,10 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"vacancy": vacancy})
         elif path == "/api/send":
             self._handle_send()
+        elif path == "/api/templates":
+            self._json(templates_api(self._read_json()))
+        elif path == "/api/social_log":
+            self._json(social_log_api(self._read_json()))
         else:
             self._json({"error": "not found"}, 404)
 
@@ -867,6 +943,17 @@ def render_db_page() -> str:
             f"<td class='num'>{g.get('count', 0)}</td>"
             "</tr>"
         )
+    srows = []
+    for sp in reversed(db.get("social_posts", [])):
+        srows.append(
+            "<tr>"
+            f"<td class='u'>{_esc({'threads': 'Threads', 'x': 'X', 'facebook': 'Facebook'}.get(sp.get('network'), sp.get('network')))}</td>"
+            f"<td>{_esc(sp.get('vacancy') or '—')}</td>"
+            f"<td>{_esc(sp.get('tag') or '—')}</td>"
+            f"<td>{_esc((sp.get('date') or '')[:16].replace('T', ' '))}</td>"
+            "</tr>"
+        )
+    sbody = "".join(srows) or "<tr><td colspan='4' class='empty'>Ще не було публікацій у соцмережах.</td></tr>"
     gbody = "".join(grows) or "<tr><td colspan='5' class='empty'>Ще не було постів у групи.</td></tr>"
     s = stats(db)
     return f"""<!doctype html><html lang="uk"><head><meta charset="utf-8">
@@ -900,6 +987,11 @@ def render_db_page() -> str:
   <table>
     <thead><tr><th>Група</th><th>Вакансія</th><th>Перший пост</th><th>Останній</th><th>Разів</th></tr></thead>
     <tbody>{gbody}</tbody>
+  </table>
+  <h1 style="margin-top:40px">Публікації в соцмережах</h1>
+  <table>
+    <thead><tr><th>Мережа</th><th>Вакансія</th><th>Тема</th><th>Коли</th></tr></thead>
+    <tbody>{sbody}</tbody>
   </table>
 </div></body></html>"""
 
