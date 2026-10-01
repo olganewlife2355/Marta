@@ -40,6 +40,7 @@
   .stat .n{font-size:22px;font-weight:800}
   .stat .l{color:var(--muted);font-size:13px}
 
+  .seg{flex-wrap:wrap;}
   .seg{display:flex;background:var(--surface);border:1px solid var(--line-strong);border-radius:99px;
        padding:4px;gap:4px;width:max-content;max-width:100%;margin:6px 0 18px}
   .seg button{all:unset;cursor:pointer;color:var(--muted);font-weight:800;font-size:15px;
@@ -67,6 +68,12 @@
   .btn.primary:hover{background:var(--accent-h)}
   .btn[disabled]{opacity:.5;pointer-events:none}
 
+  .soc{display:flex;gap:10px;flex-wrap:wrap}
+  .sbtn b{display:inline-block;width:20px;text-align:center;margin-right:4px;color:var(--accent)}
+  .fbg{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+  .fbg:last-child{border-bottom:none}
+  .fbg span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+  .fbg.done span{text-decoration:line-through}
   .glist{max-height:340px;overflow:auto;margin-top:10px;border:1px solid var(--line);border-radius:12px}
   .g{display:flex;gap:11px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
   .g:last-child{border-bottom:none}
@@ -116,13 +123,15 @@
   <div class="seg" role="group" aria-label="Куди надсилати">
     <button type="button" data-mode="dm" aria-pressed="true">👤 Особисті</button>
     <button type="button" data-mode="group" aria-pressed="false">👥 Групи</button>
+    <button type="button" data-mode="social" aria-pressed="false">🌐 Соцмережі</button>
   </div>
 
   <div class="card">
     <label class="t" for="text">Текст повідомлення</label>
     <textarea id="text" rows="7" placeholder="Привіт, {name}! Ми в StellarTech шукаємо Product Analyst…"></textarea>
     <p class="hint dm-only"><code>{name}</code> підставить ім'я кандидата з Telegram: «Привіт, {name}!» → «Привіт, Олена!»</p>
-    <p class="hint group-only hidden">У групах <code>{name}</code> прибирається автоматично (вийде «Привіт!»).</p>
+    <p class="hint group-only social-only hidden">Тут <code>{name}</code> прибирається автоматично (вийде «Привіт!»).</p>
+    <p class="hint social-only hidden" id="charInfo"></p>
     <div class="vac" id="vac"></div>
   </div>
 
@@ -157,12 +166,29 @@
     <p class="hint">Тільки публічні групи, де ви вже учасник. Приватні посилання (<code>t.me/+…</code>) не працюють: спершу вступіть і оберіть групу у списку вище.</p>
   </div>
 
-  <label class="check"><input type="checkbox" id="resend">
+  <!-- Режим: соцмережі -->
+  <div class="card social-only hidden">
+    <label class="t">Опублікувати вакансію</label>
+    <p class="hint" style="margin:0 0 12px">FoxyBox відкриє вікно публікації з уже вписаним текстом. Вам лишиться перевірити й натиснути «Опублікувати». Пост виходить від вашого імені, як звичайний.</p>
+    <div class="soc">
+      <button class="btn sbtn" type="button" id="toX"><b>𝕏</b> Опублікувати в X</button>
+      <button class="btn sbtn" type="button" id="toThreads"><b>@</b> Опублікувати в Threads</button>
+      <button class="btn sbtn" type="button" id="toFb"><b>f</b> Опублікувати у Facebook</button>
+    </div>
+    <div id="socMsg"></div>
+
+    <label class="t" for="fbGroups" style="margin-top:18px">Мої групи у Facebook</label>
+    <textarea id="fbGroups" rows="3" style="min-height:80px" placeholder="https://www.facebook.com/groups/it.jobs.ua&#10;https://www.facebook.com/groups/qa.ukraine"></textarea>
+    <p class="hint">По одному посиланню в рядку, FoxyBox їх запам'ятає. Кнопка біля групи копіює текст і відкриває групу: клацніть «Напишіть щось…» і вставте <code>Ctrl + V</code>.</p>
+    <div id="fbList" style="margin-top:10px"></div>
+  </div>
+
+  <label class="check" id="resendRow"><input type="checkbox" id="resend">
     <span class="dm-only">Написати повторно тим, кому вже писали раніше</span>
     <span class="group-only hidden">Постити повторно в групи, де сьогодні вже постили</span>
   </label>
 
-  <div class="row">
+  <div class="row" id="goRow">
     <button class="btn primary" type="button" id="go">Запустити розсилку</button>
     <a href="/db" target="_blank">Дані по контактах зберігаються тут →</a>
   </div>
@@ -204,8 +230,15 @@
     mode = m;
     try { localStorage.setItem("foxy_mode", m); } catch (e) {}
     document.querySelectorAll(".seg button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === m));
-    document.querySelectorAll(".dm-only").forEach(el => el.classList.toggle("hidden", m !== "dm"));
-    document.querySelectorAll(".group-only").forEach(el => el.classList.toggle("hidden", m !== "group"));
+    document.querySelectorAll(".dm-only, .group-only, .social-only").forEach(el => {
+      const show = (m === "dm" && el.classList.contains("dm-only")) ||
+                   (m === "group" && el.classList.contains("group-only")) ||
+                   (m === "social" && el.classList.contains("social-only"));
+      el.classList.toggle("hidden", !show);
+    });
+    $("resendRow").classList.toggle("hidden", m === "social");
+    $("goRow").classList.toggle("hidden", m === "social");
+    if (m === "social") { renderFb(); charInfo(); }
     $("go").textContent = m === "dm" ? "Запустити розсилку" : "Опублікувати в групи";
     if (m === "group" && !groups.length) loadGroups();
   }
@@ -337,6 +370,67 @@
       }
     }
   };
+
+  // ── соцмережі ──
+  // {name} для публічного поста не має сенсу: прибираємо, як і для груп
+  const NAME = "\\{(?:name|ім['ʼ’]?я)\\}";
+  const publicText = () => $("text").value
+    .replace(new RegExp(",[ \\t]*" + NAME, "gi"), "")
+    .replace(new RegExp(NAME + ",?[ \\t]*", "gi"), "").trim();
+  function charInfo() {
+    const n = [...publicText()].length;
+    const warn = [];
+    if (n > 280) warn.push("для X довше 280 символів (без X Premium обріжеться)");
+    if (n > 500) warn.push("для Threads довше 500 символів");
+    $("charInfo").innerHTML = n ? `Символів: <b>${n}</b>` + (warn.length ? ` · <span style="color:var(--amber)">${warn.join("; ")}</span>` : "") : "";
+  }
+  $("text").addEventListener("input", () => { if (mode === "social") charInfo(); });
+  function socMsg(cls, text) { $("socMsg").innerHTML = text ? `<div class="alert ${cls}">${esc(text)}</div>` : ""; }
+  function needText() {
+    const t = publicText();
+    if (!t) { socMsg("err", "Спершу впишіть текст повідомлення."); return null; }
+    socMsg("", ""); return t;
+  }
+  async function copy(t) {
+    try { await navigator.clipboard.writeText(t); return true; } catch (e) { return false; }
+  }
+  $("toX").onclick = () => {
+    const t = needText(); if (!t) return;
+    window.open("https://x.com/intent/post?text=" + encodeURIComponent(t), "_blank", "noopener");
+  };
+  $("toThreads").onclick = () => {
+    const t = needText(); if (!t) return;
+    window.open("https://www.threads.com/intent/post?text=" + encodeURIComponent(t), "_blank", "noopener");
+  };
+  $("toFb").onclick = async () => {
+    const t = needText(); if (!t) return;
+    const ok = await copy(t);
+    window.open("https://www.facebook.com/", "_blank", "noopener");
+    socMsg("warn", ok ? "Текст скопійовано. У Facebook клацніть «Що у вас нового?» і вставте Ctrl + V."
+                      : "Не вдалося скопіювати автоматично: виділіть текст вище і натисніть Ctrl + C.");
+  };
+  const fbKey = "foxy_fb_groups";
+  try { $("fbGroups").value = localStorage.getItem(fbKey) || ""; } catch (e) {}
+  const fbUrls = () => $("fbGroups").value.split(/\s+/).map(x => x.trim())
+    .filter(x => /^(https?:\/\/)?([a-z]+\.)?facebook\.com\//i.test(x))
+    .map(x => x.startsWith("http") ? x : "https://" + x);
+  function renderFb() {
+    const urls = fbUrls();
+    $("fbList").innerHTML = urls.map((u, i) => `<div class="fbg" id="fb${i}"><span title="${esc(u)}">${esc(u.replace(/^https?:\/\/(www\.)?/, ""))}</span>
+      <button class="btn" type="button" data-i="${i}">Скопіювати й відкрити</button></div>`).join("");
+    $("fbList").querySelectorAll("button").forEach(b => b.onclick = async () => {
+      const t = needText(); if (!t) return;
+      const ok = await copy(t);
+      window.open(urls[+b.dataset.i], "_blank", "noopener");
+      $("fb" + b.dataset.i).classList.add("done");
+      socMsg(ok ? "warn" : "err", ok ? "Текст скопійовано. У групі клацніть «Напишіть щось…» і вставте Ctrl + V."
+                                     : "Не вдалося скопіювати: виділіть текст і натисніть Ctrl + C.");
+    });
+  }
+  $("fbGroups").addEventListener("input", () => {
+    try { localStorage.setItem(fbKey, $("fbGroups").value); } catch (e) {}
+    renderFb();
+  });
 
   setMode(mode);
   loadStats();
