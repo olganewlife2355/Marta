@@ -20,6 +20,7 @@ import sys
 import json
 import time
 import random
+import secrets
 import asyncio
 import logging
 import threading
@@ -32,11 +33,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  1. НАЛАШТУВАННЯ TELEGRAM
-#     Ці два значення ви отримаєте на https://my.telegram.org (крок 2).
-#     Вставте їх сюди між лапками. Тримайте цей файл приватним.
+#     Редагувати цей файл НЕ потрібно. При першому запуску FoxyBox сам
+#     запитає api_id і api_hash у Терміналі й збереже їх у foxybox_config.json.
+#     (Значення нижче лишились для сумісності зі старими версіями.)
 # ─────────────────────────────────────────────────────────────────────────────
-API_ID = 0                     # <-- сюди число (наприклад 1234567)
-API_HASH = ""                  # <-- сюди рядок (наприклад "a1b2c3...")
+API_ID = 0
+API_HASH = ""
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Загальні константи
@@ -54,11 +56,18 @@ except Exception:
 
 HERE = Path(__file__).resolve().parent
 DB_PATH = HERE / "foxybox_db.json"
+CONFIG_PATH = HERE / "foxybox_config.json"   # api_id / api_hash (приватний)
 SESSION_PATH = HERE / "foxybox_session"      # файл сесії Telegram
 LOG_PATH = HERE / "foxybox.log"
 INDEX_PATH = HERE / "index.html"
 
 DRY = os.environ.get("FOXYBOX_DRY", "") in ("1", "true", "yes")
+
+# Секрет поточного запуску. Сторінка отримує його разом з index.html і шле
+# у заголовку X-FoxyBox-Token. Чужий сайт його не знає, тож не може
+# запустити розсилку з вашого акаунта.
+TOKEN = secrets.token_urlsafe(32)
+ALLOWED_HOSTS = {f"127.0.0.1:{PORT}", f"localhost:{PORT}"}
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Логування у файл
@@ -111,6 +120,42 @@ def save_db(db: dict) -> None:
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(db, f, ensure_ascii=False, indent=2)
     tmp.replace(DB_PATH)
+
+
+def load_config() -> tuple:
+    """api_id / api_hash: з foxybox_config.json, або зі старих констант."""
+    api_id, api_hash = API_ID, API_HASH
+    if CONFIG_PATH.exists():
+        try:
+            with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            api_id = int(cfg.get("api_id") or 0)
+            api_hash = str(cfg.get("api_hash") or "").strip()
+        except Exception as e:
+            log.error("Не вдалося прочитати %s: %s", CONFIG_PATH.name, e)
+    return api_id, api_hash
+
+
+def ask_config() -> tuple:
+    """Питає api_id / api_hash у Терміналі й зберігає у foxybox_config.json."""
+    print("\n=== Ключі Telegram (одноразово) ===")
+    print("Відкрийте https://my.telegram.org → API development tools")
+    print("і скопіюйте звідти два значення.\n")
+    while True:
+        raw = input("api_id (коротке число): ").strip()
+        if raw.isdigit() and int(raw) > 0:
+            api_id = int(raw)
+            break
+        print("  Це має бути лише число, без пробілів і лапок. Спробуйте ще раз.")
+    while True:
+        api_hash = input("api_hash (довгий рядок): ").strip().strip("\"'“”‘’«»")
+        if re.fullmatch(r"[0-9a-fA-F]{32}", api_hash):
+            break
+        print("  api_hash має 32 символи (цифри та літери a-f). Скопіюйте його ще раз.")
+    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump({"api_id": api_id, "api_hash": api_hash}, f, indent=2)
+    print(f"Збережено у {CONFIG_PATH.name}. Більше питати не буду.\n")
+    return api_id, api_hash
 
 
 def norm_username(u: str) -> str:
@@ -206,9 +251,9 @@ client = None  # створюється в main() після перевірки 
 _me_cache = {"name": None, "username": None, "authorized": False}
 
 
-def build_client():
+def build_client(api_id: int, api_hash: str):
     global client
-    client = TelegramClient(str(SESSION_PATH), API_ID, API_HASH, loop=_loop)
+    client = TelegramClient(str(SESSION_PATH), api_id, api_hash, loop=_loop)
     return client
 _campaign_lock = threading.Lock()  # лише одна розсилка одночасно
 
@@ -262,16 +307,27 @@ async def run_campaign(text: str, usernames: list, q: Queue):
             emit(type="done"); return
 
         db = load_db()
+        # тим, кому вже писали, повторно не пишемо
+        known = {k.lower(): v for k, v in db["contacts"].items()}
+        already = [u for u in clean if u.lower() in known]
+        clean = [u for u in clean if u.lower() not in known]
+
         remaining = stats(db)["remaining_today"]
-        if remaining <= 0:
+        if remaining <= 0 and not DRY:
             emit(type="error", message="На сьогодні ліміт вичерпано. Спробуйте завтра після 00:00 CET.")
             emit(type="done"); return
+        if DRY:
+            # тестовий прогін не витрачає реальний ліміт
+            remaining = DAILY_LIMIT
 
         to_send = clean[:remaining]
         overflow = clean[remaining:]
 
         emit(type="start", total=len(to_send), vacancy=vacancy,
-             overflow=len(overflow), dry=DRY)
+             overflow=len(overflow), already=len(already), dry=DRY)
+        for u in already:
+            emit(type="skipped", username=u, index=0,
+                 reason=f"вже писали {known[u.lower()].get('last_contact') or 'раніше'}")
 
         sent = 0
         for i, username in enumerate(to_send, start=1):
@@ -303,26 +359,27 @@ async def run_campaign(text: str, usernames: list, q: Queue):
                     await client.send_message(entity, text)
                 sent += 1
 
-                # оновити базу
-                with _db_lock:
-                    db = load_db()
-                    c = db["contacts"].get(username)
-                    if c:
-                        c["last_contact"] = today_str()
-                        c["count"] = c.get("count", 0) + 1
-                        if vacancy and not c.get("vacancy"):
-                            c["vacancy"] = vacancy
-                    else:
-                        db["contacts"][username] = {
-                            "vacancy": vacancy,
-                            "first_contact": today_str(),
-                            "last_contact": today_str(),
-                            "count": 1,
-                        }
-                    d = today_str()
-                    db["daily_sent"][d] = db["daily_sent"].get(d, 0) + 1
-                    db["total_sent"] = db.get("total_sent", 0) + 1
-                    save_db(db)
+                # оновити базу (у тестовому режимі базу й ліміт не чіпаємо)
+                if not DRY:
+                    with _db_lock:
+                        db = load_db()
+                        c = db["contacts"].get(username)
+                        if c:
+                            c["last_contact"] = today_str()
+                            c["count"] = c.get("count", 0) + 1
+                            if vacancy and not c.get("vacancy"):
+                                c["vacancy"] = vacancy
+                        else:
+                            db["contacts"][username] = {
+                                "vacancy": vacancy,
+                                "first_contact": today_str(),
+                                "last_contact": today_str(),
+                                "count": 1,
+                            }
+                        d = today_str()
+                        db["daily_sent"][d] = db["daily_sent"].get(d, 0) + 1
+                        db["total_sent"] = db.get("total_sent", 0) + 1
+                        save_db(db)
 
                 is_last = (i == len(to_send))
                 wait = 0 if is_last else random.randint(PAUSE_MIN, PAUSE_MAX)
@@ -367,6 +424,9 @@ async def run_campaign(text: str, usernames: list, q: Queue):
         log.exception("campaign crashed")
         emit(type="error", message=f"Несподівана помилка: {e}")
     finally:
+        # блокування знімаємо лише тут: закрита вкладка не зупиняє розсилку,
+        # тож другу паралельну запускати не можна, доки ця не завершиться
+        _campaign_lock.release()
         emit(type="done")
 
 
@@ -403,15 +463,38 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             return {}
 
+    # ── захист ──
+    def _host_ok(self) -> bool:
+        """Відповідаємо лише на запити до 127.0.0.1/localhost (захист від DNS rebinding)."""
+        if self.headers.get("Host", "") in ALLOWED_HOSTS:
+            return True
+        self._json({"error": "forbidden"}, 403)
+        return False
+
+    def _token_ok(self) -> bool:
+        """API доступне лише сторінці FoxyBox, яка знає токен цього запуску."""
+        got = self.headers.get("X-FoxyBox-Token", "")
+        if secrets.compare_digest(got, TOKEN):
+            return True
+        self._json({"error": "Сторінка застаріла. Оновіть її (Cmd+R / F5)."}, 403)
+        return False
+
     # ── GET ──
     def do_GET(self):
+        if not self._host_ok():
+            return
         path = self.path.split("?")[0]
+        if path.startswith("/api/") and not self._token_ok():
+            return
         if path == "/":
             try:
-                html = INDEX_PATH.read_bytes()
+                html = INDEX_PATH.read_bytes().replace(
+                    b"__FOXYBOX_TOKEN__", TOKEN.encode("ascii"))
             except FileNotFoundError:
                 html = b"index.html not found"
-            self._send(200, html, "text/html; charset=utf-8")
+            self._send(200, html, "text/html; charset=utf-8",
+                       extra={"X-Frame-Options": "DENY",
+                              "Referrer-Policy": "no-referrer"})
         elif path == "/api/stats":
             db = load_db()
             s = stats(db)
@@ -428,6 +511,11 @@ class Handler(BaseHTTPRequestHandler):
 
     # ── POST ──
     def do_POST(self):
+        if not self._host_ok() or not self._token_ok():
+            return
+        if not self.headers.get("Content-Type", "").startswith("application/json"):
+            self._json({"error": "bad content type"}, 415)
+            return
         path = self.path.split("?")[0]
         if path == "/api/preview":
             data = self._read_json()
@@ -446,14 +534,22 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": "Розсилка вже виконується. Дочекайтесь її завершення."}, 409)
             return
 
-        data = self._read_json()
+        try:
+            data = self._read_json()
+        except Exception:
+            _campaign_lock.release()
+            raise
         text = data.get("text", "")
         usernames = data.get("usernames", [])
         if isinstance(usernames, str):
             usernames = usernames.splitlines()
 
         q: Queue = Queue()
-        asyncio.run_coroutine_threadsafe(run_campaign(text, usernames, q), _loop)
+        try:
+            asyncio.run_coroutine_threadsafe(run_campaign(text, usernames, q), _loop)
+        except Exception:
+            _campaign_lock.release()
+            raise
 
         # стрімимо NDJSON у браузер, рядок за рядком
         self.send_response(200)
@@ -461,19 +557,16 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Accel-Buffering", "no")
         self.end_headers()
-        try:
-            while True:
-                ev = q.get()
-                line = (json.dumps(ev, ensure_ascii=False) + "\n").encode("utf-8")
-                try:
-                    self.wfile.write(line)
-                    self.wfile.flush()
-                except (BrokenPipeError, ConnectionResetError):
-                    break
-                if ev.get("type") == "done":
-                    break
-        finally:
-            _campaign_lock.release()
+        while True:
+            ev = q.get()
+            line = (json.dumps(ev, ensure_ascii=False) + "\n").encode("utf-8")
+            try:
+                self.wfile.write(line)
+                self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError):
+                break
+            if ev.get("type") == "done":
+                break
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -544,10 +637,13 @@ def start_loop_thread():
 
 
 def main():
-    if API_ID == 0 or not API_HASH:
-        print("FoxyBox: спершу впишіть API_ID і API_HASH у файл foxybox.py "
-              "(рядки 40-41). Їх видають на https://my.telegram.org")
-        sys.exit(0)
+    api_id, api_hash = load_config()
+    if not api_id or not api_hash:
+        if not sys.stdin.isatty():
+            print("FoxyBox: запустіть FoxyBox.command подвійним кліком, "
+                  "щоб один раз ввести ключі Telegram.")
+            sys.exit(0)
+        api_id, api_hash = ask_config()
 
     if TZ is None:
         # Найчастіше це Windows без бази таймзон.
@@ -556,7 +652,7 @@ def main():
         print("    pip install tzdata")
         sys.exit(0)
 
-    build_client()
+    build_client(api_id, api_hash)
 
     # Підключення й авторизацію робимо ДО старту фонового циклу,
     # щоб інтерактивний ввід коду не конфліктував з asyncio.
@@ -587,6 +683,12 @@ def main():
                 code_callback=lambda: input("Код із Telegram: ").strip(),
                 password=lambda: getpass("Хмарний пароль (двоетапна перевірка): "),
             )
+        except errors.ApiIdInvalidError:
+            log.exception("Auth failed: api_id/api_hash rejected")
+            CONFIG_PATH.unlink(missing_ok=True)
+            print("\nTelegram не прийняв api_id / api_hash. Запустіть FoxyBox ще раз")
+            print("і введіть їх уважно, скопіювавши з my.telegram.org.")
+            sys.exit(0)
         except Exception as e:
             log.exception("Auth failed")
             print(f"\nНе вдалося увійти: {e}")

@@ -171,7 +171,7 @@
   <!-- Список -->
   <div class="card">
     <label class="field-title" for="usernames">Кому надіслати</label>
-    <p class="hint">По одному юзернейму в рядку. Можна з @ або без. Писати можна тільки тим, у кого є @username.</p>
+    <p class="hint">По одному юзернейму в рядку. Можна з @ або без. Писати можна тільки тим, у кого є @username. Тим, кому вже писали, FoxyBox повторно не надсилає.</p>
     <textarea id="usernames" placeholder="@kateryna_dev&#10;@ivan.backend&#10;@maria_qa"></textarea>
   </div>
 
@@ -214,12 +214,22 @@
 
 <script>
 const $ = s => document.querySelector(s);
+// токен цього запуску FoxyBox (сервер підставляє його при відкритті сторінки)
+const TOKEN = '__FOXYBOX_TOKEN__';
+function api(path, body){
+  const opt = {headers:{'X-FoxyBox-Token':TOKEN}};
+  if(body!==undefined){
+    opt.method='POST'; opt.headers['Content-Type']='application/json';
+    opt.body=JSON.stringify(body);
+  }
+  return fetch(path, opt);
+}
 const pitch = $('#pitch'), usernames = $('#usernames');
 
 // ── Показники ──
 async function loadStats(){
   try{
-    const r = await fetch('/api/stats'); const s = await r.json();
+    const r = await api('/api/stats'); const s = await r.json();
     $('#stTotalContacts').textContent = s.total_contacts;
     $('#stTotalSent').textContent = s.total_sent;
     $('#stToday').textContent = s.sent_today;
@@ -247,8 +257,7 @@ async function updatePreview(){
   const tag = $('#vacTag');
   if(text){
     try{
-      const r = await fetch('/api/preview',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({text})});
+      const r = await api('/api/preview',{text});
       const d = await r.json();
       if(d.vacancy){ tag.innerHTML = 'Вакансія з пічу: <span>'+escapeHtml(d.vacancy)+'</span>'; tag.classList.add('show'); }
       else{ tag.classList.remove('show'); }
@@ -299,9 +308,7 @@ runBtn.addEventListener('click',async()=>{
   let total=list.length, sentCount=0;
 
   try{
-    const resp=await fetch('/api/send',{method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text,usernames:list})});
+    const resp=await api('/api/send',{text,usernames:list});
 
     if(!resp.ok){
       const d=await resp.json().catch(()=>({error:'Помилка сервера'}));
@@ -330,6 +337,7 @@ runBtn.addEventListener('click',async()=>{
       $('#progLine').textContent = ev.dry
         ? 'Тестовий прогон: '+total+' повідомлень (реально не шлються)'
         : 'Надсилаю '+total+' повідомлень…';
+      if(ev.already>0) addLog('<span class="skip">'+ev.already+' зі списку пропущено: їм уже писали раніше.</span>');
       if(ev.overflow>0) addLog('<span class="skip">'+ev.overflow+' зі списку відкладено: сьогодні впираємось у денний ліміт.</span>');
     }
     else if(ev.type==='sent'){
