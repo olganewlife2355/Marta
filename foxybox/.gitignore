@@ -1,0 +1,6 @@
+foxybox_config.json
+foxybox_db.json
+foxybox_db.json.tmp
+foxybox_session.session*
+foxybox.log
+__pycache__/

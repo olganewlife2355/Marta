@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FoxyBox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0d0c; --card:#14181a; --line:rgba(255,255,255,.07);
+    --accent:#3ee0c0; --accent-h:#56f0cf; --text:#eef3f1; --muted:#9aa6a2;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; color:var(--text);
+    font-family:'Nunito',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    background:var(--bg);
+    background-image:radial-gradient(1100px 560px at 50% -220px,#12211d,transparent);
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:680px;margin:0 auto;padding:38px 22px 60px}
+
+  /* ── Шапка ── */
+  header{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;margin-bottom:30px}
+  .logo-tile{
+    width:78px;height:78px;border-radius:22px;
+    background:#101614;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;
+    animation:glow 3.2s ease-in-out infinite;
+  }
+  .logo-tile svg{width:46px;height:46px;display:block}
+  @keyframes glow{
+    0%,100%{filter:drop-shadow(0 0 3px rgba(62,224,192,.45)) drop-shadow(0 0 8px rgba(62,224,192,.25))}
+    50%{filter:drop-shadow(0 0 7px rgba(86,240,207,.9)) drop-shadow(0 0 20px rgba(62,224,192,.55))}
+  }
+  h1{font-size:34px;font-weight:800;margin:0;letter-spacing:-.01em}
+  h1 .foxy{color:var(--accent)} h1 .box{color:#fff}
+  .subtitle{color:var(--muted);font-size:15.5px;margin:0;max-width:440px;line-height:1.5}
+
+  /* ── Картки ── */
+  .card{
+    background:var(--card);border:1px solid var(--line);
+    border-radius:20px;padding:20px 20px;margin-bottom:16px;
+  }
+  label.field-title{display:block;font-weight:700;font-size:15px;margin-bottom:4px}
+  .hint{color:var(--muted);font-size:13.5px;margin:0 0 12px;line-height:1.45}
+  textarea{
+    width:100%;background:#0f1413;color:var(--text);
+    border:1px solid var(--line);border-radius:14px;
+    padding:13px 14px;font:inherit;font-size:15px;resize:vertical;
+    line-height:1.5;outline:none;transition:border-color .15s;
+  }
+  textarea:focus{border-color:rgba(62,224,192,.55)}
+  #pitch{min-height:120px} #usernames{min-height:110px}
+
+  .vac-tag{
+    display:none;margin-top:12px;padding:9px 13px;border-radius:12px;
+    background:rgba(62,224,192,.10);border:1px solid rgba(62,224,192,.28);
+    color:var(--accent);font-weight:700;font-size:14px;
+  }
+  .vac-tag.show{display:inline-block}
+  .vac-tag span{color:var(--text);font-weight:600}
+
+  /* ── Прев'ю Telegram ── */
+  .preview-title{font-weight:700;font-size:15px;margin:2px 0 12px}
+  .tg-msg{display:flex;gap:11px;align-items:flex-start;margin-bottom:12px}
+  .tg-msg:last-child{margin-bottom:0}
+  .avatar{
+    width:40px;height:40px;border-radius:50%;flex:0 0 40px;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:17px;color:#08110e;
+    background:linear-gradient(135deg,#3ee0c0,#2ab79b);
+  }
+  .bubble-wrap{min-width:0}
+  .bubble-name{color:var(--accent);font-weight:700;font-size:13.5px;margin-bottom:3px}
+  .bubble{
+    background:#20272a;border-radius:4px 16px 16px 16px;
+    padding:10px 13px;font-size:14.5px;line-height:1.45;
+    white-space:pre-wrap;word-break:break-word;color:#e9efee;
+  }
+  .preview-empty{color:var(--muted);font-size:14px}
+
+  /* ── Показники ── */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0 16px}
+  .stat{
+    background:var(--card);border:1px solid var(--line);border-radius:16px;
+    padding:14px 10px;text-align:center;
+  }
+  .stat .num{font-size:26px;font-weight:800;line-height:1}
+  .stat .num.accent{color:var(--accent)}
+  .stat .cap{color:var(--muted);font-size:12px;margin-top:6px;line-height:1.3}
+  @media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
+
+  /* ── Кнопка ── */
+  .run-btn{
+    width:100%;border:none;cursor:pointer;
+    background:var(--accent);color:#062019;
+    font-family:inherit;font-weight:800;font-size:18px;
+    padding:17px;border-radius:980px;
+    box-shadow:0 6px 26px rgba(62,224,192,.32);
+    transition:background .15s,transform .06s,box-shadow .15s;
+  }
+  .run-btn:hover{background:var(--accent-h);box-shadow:0 8px 32px rgba(62,224,192,.45)}
+  .run-btn:active{transform:translateY(1px)}
+  .run-btn:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+
+  /* ── Прогрес / результат ── */
+  #progress{display:none;margin-top:16px}
+  #progress.show{display:block}
+  .prog-line{font-weight:700;font-size:16px;margin-bottom:12px}
+  .bar{height:9px;background:#0f1413;border-radius:980px;overflow:hidden;border:1px solid var(--line)}
+  .bar>i{display:block;height:100%;width:0;background:var(--accent);border-radius:980px;transition:width .4s}
+  .log{margin-top:14px;font-size:14px;line-height:1.7}
+  .log .ok{color:var(--accent)}
+  .log .skip{color:var(--muted)}
+  .log .stop{color:#ffd15c}
+  .banner{
+    margin-top:14px;padding:13px 15px;border-radius:14px;font-size:14.5px;line-height:1.5;
+    background:rgba(255,209,92,.10);border:1px solid rgba(255,209,92,.35);color:#ffe09a;
+  }
+  .banner.err{background:rgba(255,107,107,.10);border-color:rgba(255,107,107,.4);color:#ffb3b3}
+
+  /* ── Попередження ── */
+  .warn{
+    margin-top:22px;padding:15px 17px;border-radius:16px;font-size:14px;line-height:1.55;
+    background:rgba(255,209,92,.08);border:1px solid rgba(255,209,92,.30);color:#f2d99a;
+  }
+  .warn b{color:#ffe4a3}
+  .foot{text-align:center;margin-top:26px}
+  .foot a{color:var(--accent);text-decoration:none;font-weight:700}
+  .foot a:hover{text-decoration:underline}
+  .status-dot{font-size:13px;color:var(--muted);text-align:center;margin-top:10px}
+  .status-dot b{color:var(--accent)}
+
+  @media (prefers-reduced-motion:reduce){
+    .logo-tile{animation:none;filter:drop-shadow(0 0 8px rgba(62,224,192,.5))}
+    .bar>i{transition:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo-tile" aria-hidden="true">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"
+           stroke="#3ee0c0" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M28 8 L11 52 L50 93 L89 52 L72 8 L58 38 L50 48 L42 38 Z"/>
+        <path d="M36 51 L50 74 L64 51"/>
+        <path d="M20 52 L34 57"/>
+        <path d="M26 62 L36 64"/>
+        <path d="M80 52 L66 57"/>
+        <path d="M74 62 L64 64"/>
+        <path d="M45 82 L55 82 L50 88 Z" fill="#3ee0c0"/>
+      </svg>
+    </div>
+    <h1><span class="foxy">Foxy</span><span class="box">Box</span></h1>
+    <p class="subtitle">Тепла розсилка перших повідомлень кандидатам у Telegram. Вставте піч і список — решту зробить FoxyBox.</p>
+  </header>
+
+  <!-- Піч -->
+  <div class="card">
+    <label class="field-title" for="pitch">Текст повідомлення</label>
+    <p class="hint">Опишіть вакансію своїми словами, так, як написали б кандидату. Це повідомлення отримає кожен зі списку.</p>
+    <textarea id="pitch" placeholder="Привіт! Ми шукаємо Python розробника в дружню продуктову команду. Повна віддаленка, гнучкий графік. Буде цікаво розповісти деталі, якщо відгукнеться :)"></textarea>
+    <div class="vac-tag" id="vacTag"></div>
+  </div>
+
+  <!-- Список -->
+  <div class="card">
+    <label class="field-title" for="usernames">Кому надіслати</label>
+    <p class="hint">По одному юзернейму в рядку. Можна з @ або без. Писати можна тільки тим, у кого є @username.</p>
+    <textarea id="usernames" placeholder="@kateryna_dev&#10;@ivan.backend&#10;@maria_qa"></textarea>
+  </div>
+
+  <!-- Прев'ю -->
+  <div class="card" id="previewCard" style="display:none">
+    <div class="preview-title">Як це побачить кандидат</div>
+    <div id="previewList"></div>
+  </div>
+
+  <!-- Показники -->
+  <div class="stats">
+    <div class="stat"><div class="num" id="stTotalContacts">0</div><div class="cap">Всього контактів у базі</div></div>
+    <div class="stat"><div class="num" id="stTotalSent">0</div><div class="cap">Всього надіслано</div></div>
+    <div class="stat"><div class="num" id="stToday">0</div><div class="cap">Надіслано сьогодні</div></div>
+    <div class="stat"><div class="num accent" id="stLeft">30</div><div class="cap">Лишилось до ліміту сьогодні</div></div>
+  </div>
+
+  <button class="run-btn" id="runBtn">Запустити розсилку</button>
+  <div class="status-dot" id="statusDot"></div>
+
+  <!-- Прогрес -->
+  <div id="progress">
+    <div class="prog-line" id="progLine">Готуюсь…</div>
+    <div class="bar"><i id="progBar"></i></div>
+    <div class="log" id="progLog"></div>
+    <div id="progBanner"></div>
+  </div>
+
+  <!-- Попередження -->
+  <div class="warn">
+    <b>Пишіть обачливо.</b> Тримайте темп близько 30 повідомлень на день і не скорочуйте паузи між ними.
+    Великий список краще розбити на кілька днів. Інакше Telegram може сприйняти це за спам і обмежити акаунт.
+  </div>
+
+  <div class="foot">
+    <a href="/db" target="_blank">Дані по контактах зберігаються тут</a>
+  </div>
+
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const pitch = $('#pitch'), usernames = $('#usernames');
+
+// ── Показники ──
+async function loadStats(){
+  try{
+    const r = await fetch('/api/stats'); const s = await r.json();
+    $('#stTotalContacts').textContent = s.total_contacts;
+    $('#stTotalSent').textContent = s.total_sent;
+    $('#stToday').textContent = s.sent_today;
+    $('#stLeft').textContent = s.remaining_today;
+    const dot = $('#statusDot');
+    if(!s.authorized){
+      dot.innerHTML = 'Telegram ще не підключено. Запустіть авторизацію в Терміналі.';
+    }else{
+      dot.innerHTML = 'Підключено: <b>'+(s.me||'ваш акаунт')+'</b>' +
+        (s.dry ? ' &middot; тестовий режим, нічого реально не шлеться' : '');
+    }
+    return s;
+  }catch(e){ return null; }
+}
+
+// ── Вакансія з пічу ──
+let previewTimer=null;
+function schedulePreview(){
+  clearTimeout(previewTimer);
+  previewTimer=setTimeout(updatePreview,350);
+}
+async function updatePreview(){
+  const text = pitch.value.trim();
+  // тег вакансії
+  const tag = $('#vacTag');
+  if(text){
+    try{
+      const r = await fetch('/api/preview',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({text})});
+      const d = await r.json();
+      if(d.vacancy){ tag.innerHTML = 'Вакансія з пічу: <span>'+escapeHtml(d.vacancy)+'</span>'; tag.classList.add('show'); }
+      else{ tag.classList.remove('show'); }
+    }catch(e){ tag.classList.remove('show'); }
+  }else{ tag.classList.remove('show'); }
+
+  // прев'ю карток
+  const list = parseUsernames();
+  const card = $('#previewCard'), box = $('#previewList');
+  if(text && list.length){
+    card.style.display='block';
+    box.innerHTML = list.slice(0,3).map(u=>tgCard(u,text)).join('') +
+      (list.length>3 ? '<div class="preview-empty">…і ще '+(list.length-3)+'</div>' : '');
+  }else{ card.style.display='none'; }
+}
+function tgCard(u,text){
+  const letter = (u[0]||'?').toUpperCase();
+  return '<div class="tg-msg"><div class="avatar">'+escapeHtml(letter)+'</div>'+
+    '<div class="bubble-wrap"><div class="bubble-name">@'+escapeHtml(u)+'</div>'+
+    '<div class="bubble">'+escapeHtml(text)+'</div></div></div>';
+}
+function parseUsernames(){
+  return usernames.value.split('\n')
+    .map(x=>x.trim().replace(/^https?:\/\//,'').replace(/^t\.me\//,'').replace(/^@/,'').trim())
+    .filter(Boolean);
+}
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+pitch.addEventListener('input',schedulePreview);
+usernames.addEventListener('input',schedulePreview);
+
+// ── Розсилка ──
+const runBtn=$('#runBtn');
+let countdownTimer=null;
+
+runBtn.addEventListener('click',async()=>{
+  const text=pitch.value.trim();
+  const list=parseUsernames();
+  if(!text){ alert('Впишіть текст повідомлення.'); return; }
+  if(!list.length){ alert('Додайте хоча б один юзернейм.'); return; }
+
+  runBtn.disabled=true;
+  const prog=$('#progress'); prog.classList.add('show');
+  $('#progLog').innerHTML=''; $('#progBanner').innerHTML='';
+  $('#progBar').style.width='0%';
+  $('#progLine').textContent='Готуюсь…';
+
+  let total=list.length, sentCount=0;
+
+  try{
+    const resp=await fetch('/api/send',{method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text,usernames:list})});
+
+    if(!resp.ok){
+      const d=await resp.json().catch(()=>({error:'Помилка сервера'}));
+      showBanner(d.error||'Помилка','err'); finishRun(); return;
+    }
+
+    const reader=resp.body.getReader(); const dec=new TextDecoder(); let buf='';
+    while(true){
+      const {value,done}=await reader.read(); if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      let nl;
+      while((nl=buf.indexOf('\n'))>=0){
+        const line=buf.slice(0,nl).trim(); buf=buf.slice(nl+1);
+        if(!line) continue;
+        handleEvent(JSON.parse(line));
+      }
+    }
+  }catch(e){
+    showBanner('Зʼєднання перервалось: '+e.message,'err');
+  }
+  finishRun();
+
+  function handleEvent(ev){
+    if(ev.type==='start'){
+      total=ev.total;
+      $('#progLine').textContent = ev.dry
+        ? 'Тестовий прогон: '+total+' повідомлень (реально не шлються)'
+        : 'Надсилаю '+total+' повідомлень…';
+      if(ev.overflow>0) addLog('<span class="skip">'+ev.overflow+' зі списку відкладено: сьогодні впираємось у денний ліміт.</span>');
+    }
+    else if(ev.type==='sent'){
+      sentCount=ev.sent;
+      $('#progBar').style.width=Math.round(ev.index/total*100)+'%';
+      addLog('<span class="ok">✓ надіслано @'+escapeHtml(ev.username)+'</span>');
+      if(ev.wait>0){ startCountdown(ev.index,total,ev.wait); }
+      else{ $('#progLine').textContent='Надіслано '+ev.index+'/'+total; }
+    }
+    else if(ev.type==='skipped'){
+      addLog('<span class="skip">— пропущено @'+escapeHtml(ev.username)+' ('+escapeHtml(ev.reason)+')</span>');
+    }
+    else if(ev.type==='stopped'){
+      clearInterval(countdownTimer);
+      addLog('<span class="stop">■ зупинено на @'+escapeHtml(ev.username||'')+'</span>');
+      showBanner(ev.message,'err');
+    }
+    else if(ev.type==='error'){
+      showBanner(ev.message,'err');
+    }
+    else if(ev.type==='finished'){
+      clearInterval(countdownTimer);
+      $('#progBar').style.width='100%';
+      let msg = ev.dry
+        ? 'Тест завершено: успішно опрацьовано '+ev.sent+' з '+ev.requested+'. Реальні повідомлення не надсилались.'
+        : 'Готово! Надіслано '+ev.sent+' з '+ev.requested+'.';
+      if(ev.overflow>0) msg+=' Ще '+ev.overflow+' лишились на завтра через денний ліміт.';
+      $('#progLine').textContent=msg;
+      showBanner(msg,'ok');
+    }
+  }
+
+  function startCountdown(index,total,secs){
+    clearInterval(countdownTimer);
+    let left=secs;
+    const tick=()=>{ $('#progLine').textContent='Надіслано '+index+'/'+total+', наступне через '+left+' с'; left--;
+      if(left<0) clearInterval(countdownTimer); };
+    tick(); countdownTimer=setInterval(tick,1000);
+  }
+});
+
+function addLog(html){ const l=$('#progLog'); l.insertAdjacentHTML('beforeend',html+'<br>'); l.scrollTop=l.scrollHeight; }
+function showBanner(msg,kind){
+  const b=$('#progBanner');
+  b.innerHTML='<div class="banner'+(kind==='err'?' err':'')+'">'+escapeHtml(msg)+'</div>';
+}
+function finishRun(){
+  clearInterval(countdownTimer);
+  runBtn.disabled=false;
+  loadStats();
+}
+
+// старт
+loadStats();
+setInterval(loadStats, 20000);
+</script>
+</body>
+</html>
